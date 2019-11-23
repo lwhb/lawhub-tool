@@ -35,7 +35,7 @@ def main(in_fp, out_fp):
                 f.write(f'!!{line}\n')
             else:
                 for action in actions:
-                    f.write(f'{action.to_dict()}\n')
+                    f.write(f'{json.dumps(action.to_dict(), ensure_ascii=False)}\n')
                 success_count += 1
     LOGGER.info(f'Successfully parsed {success_count} / {process_count} lines')
 
@@ -44,5 +44,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     in_fp = '/Users/musui/lawhub/lawhub-spider/data/syuhou/195/4/houan.json'
-    out_fp = 'out.jsonl'
+    out_fp = 'gian.jsonl'
     main(in_fp, out_fp)

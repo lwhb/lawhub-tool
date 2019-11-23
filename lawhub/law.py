@@ -1,7 +1,10 @@
 from logging import getLogger
 
+from lawhub.kanzize import int2kanji
+
 LOGGER = getLogger(__name__)
 INDENT = ' ' * 4
+
 
 def parse(node):
     if node.tag == 'Part':
@@ -30,7 +33,12 @@ def parse(node):
         raise NotImplementedError(node.tag)
 
 
-class BaseSectionClass:
+class BaseLawClass:
+    def get_title(self):
+        return ''
+
+
+class BaseSectionClass(BaseLawClass):
     def __init__(self, node):
         self.title = node[0].text
         self.children = [parse(child) for child in node[1:]]
@@ -38,8 +46,11 @@ class BaseSectionClass:
     def __str__(self):
         return '\n'.join([self.title] + list(map(lambda x: x.__str__(), self.children)) + [''])
 
+    def get_title(self):
+        return self.title
 
-class BaseItemClass:
+
+class BaseItemClass(BaseLawClass):
     def __init__(self, node):
         self.title = node[0].text
         self.sentence = INDENT.join(map(lambda n: n.text, node[1].findall('.//Sentence')))
@@ -47,6 +58,9 @@ class BaseItemClass:
 
     def __str__(self):
         return '\n'.join([f'{self.title}　{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
+
+    def get_title(self):
+        return ''
 
 
 class Part(BaseSectionClass):
@@ -84,7 +98,7 @@ class Division(BaseSectionClass):
         super().__init__(node)
 
 
-class Article:
+class Article(BaseLawClass):
     def __init__(self, node):
         assert node.tag == 'Article'
         if node[0].tag == 'ArticleCaption' and node[1].tag == 'ArticleTitle':
@@ -104,13 +118,16 @@ class Article:
         else:
             return '\n'.join([self.title] + list(map(lambda x: x.__str__(), self.children)) + [''])
 
+    def get_title(self):
+        return self.title
 
-class Paragraph:
+
+class Paragraph(BaseLawClass):
     def __init__(self, node):
         assert node.tag == 'Paragraph'
         assert node[0].tag == 'ParagraphNum'
         assert node[1].tag == 'ParagraphSentence'
-        self.num = node[0].text
+        self.num = int(node[0].text) if node[0].text else None
         self.sentence = node[1][0].text
         self.children = [parse(child) for child in node[2:]]
 
@@ -119,6 +136,9 @@ class Paragraph:
             return '\n'.join([f'{self.num}　{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
         else:
             return '\n'.join([f'{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
+
+    def get_title(self):
+        return '第{}項'.format(int2kanji(self.num) if self.num else '一')
 
 
 class Item(BaseItemClass):
@@ -130,6 +150,9 @@ class Item(BaseItemClass):
 
     def __str__(self):
         return INDENT + super().__str__()
+
+    def get_title(self):
+        return '第{}号'.format(self.title if self.title else '一')
 
 
 class Subitem1(BaseItemClass):

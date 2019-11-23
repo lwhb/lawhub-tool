@@ -15,7 +15,36 @@ class ActionType(str, Enum):
 
 
 class Action:
-    def __init__(self, sentence):
+    def __init__(self, obj):
+        if isinstance(obj, dict):
+            self.__init_by_dict__(obj)
+        elif isinstance(obj, str):
+            self.__init_by_str__(obj)
+        else:
+            msg = f'Failed to instantiate Action from {type(obj)}'
+            raise NotImplementedError(msg)
+
+    def __init_by_dict__(self, data):
+        try:
+            self.action_type = ActionType(data['action_type'])
+            if self.action_type in (ActionType.ADD, ActionType.DELETE):
+                self.at = Query(data['at'])
+                self.what = data['what']
+            elif self.action_type == ActionType.REPLACE:
+                self.at = Query(data['at'])
+                self.old = data['old']
+                self.new = data['new']
+            elif self.action_type == ActionType.RENAME:
+                self.old = Query(data['old'])
+                self.new = Query(data['new'])
+            else:
+                msg = 'unknown ActionType={self.action_type}'
+                raise NotImplementedError(msg)
+        except Exception as e:
+            msg = f'Failed to instantiate Action from {data}: {e}'
+            raise ValueError(msg)
+
+    def __init_by_str__(self, sentence):
         self.sentence = sentence
 
         if self.__init_add__(sentence):
@@ -76,7 +105,7 @@ class Action:
             return True
 
     def to_dict(self):
-        ret = {'action_type': self.action_type.name}
+        ret = {'action_type': self.action_type.value}
         if self.action_type in (ActionType.ADD, ActionType.DELETE):
             ret['at'] = self.at.to_dict()
             ret['what'] = self.what
@@ -106,7 +135,7 @@ class Action:
             raise NotImplementedError(msg)
 
     def __eq__(self, other):
-        if not(isinstance(other, Action)):
+        if not (isinstance(other, Action)):
             return False
         if self.action_type != other.action_type:
             return False

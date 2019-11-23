@@ -14,7 +14,26 @@ class LawDivision(str, Enum):
 
 
 class Query:
-    def __init__(self, text):
+    def __init__(self, obj):
+        if isinstance(obj, dict):
+            self.__init_by_dict__(obj)
+        elif isinstance(obj, str):
+            self.__init_by_str__(obj)
+        else:
+            msg = f'Failed to instantiate Query from {type(obj)}'
+            raise NotImplementedError(msg)
+
+    def __init_by_dict__(self, data):
+        try:
+            self.text = data['text']
+            self.jou = data['jou']
+            self.kou = data['kou']
+            self.gou = data['gou']
+        except KeyError as e:
+            msg = f'Failed to instantiate Query from {data}'
+            raise ValueError(msg)
+
+    def __init_by_str__(self, text):
         self.text = text
         self.jou = ''
         self.kou = ''
@@ -31,7 +50,10 @@ class Query:
     def __eq__(self, other):
         if not (isinstance(other, Query)):
             return False
-        return self.text == other.text and self.jou == other.jou and self.kou == other.kou and self.gou == other.gou
+        return self.jou == other.jou and self.kou == other.kou and self.gou == other.gou
+
+    def __hash__(self):
+        return hash(self.jou + self.kou + self.gou)
 
     def get(self, law_div):
         if law_div == LawDivision.JOU:
@@ -66,6 +88,9 @@ class Query:
     def clear(self, law_div):
         return self.set(law_div, '')
 
+    def is_empty(self):
+        return not(self.has(LawDivision.JOU) or self.has(LawDivision.KOU) or self.has(LawDivision.GOU))
+
     def to_dict(self):
         return {'text': self.text, 'jou': self.jou, 'kou': self.kou, 'gou': self.gou}
 
@@ -88,6 +113,8 @@ class QueryCompensator:
                 do_compensate = True
             elif do_compensate and law_div in self.context:
                 query.set(law_div, self.context[law_div])
+            elif do_compensate and law_div == LawDivision.KOU:  # AdHoc fix for cases like "第四条第二号"
+                query.set(law_div, '第一項')
         return query
 
 
