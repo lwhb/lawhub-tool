@@ -1,15 +1,7 @@
 from logging import getLogger
 
-import requests
-
 LOGGER = getLogger(__name__)
 INDENT = ' ' * 4
-
-
-def fetch(law_num):
-    url = f'https://elaws.e-gov.go.jp/api/1/lawdata/{law_num}'
-    return requests.get(url)
-
 
 def parse(node):
     if node.tag == 'Part':
@@ -32,6 +24,8 @@ def parse(node):
         return Subitem1(node)
     elif node.tag == 'Subitem2':
         return Subitem2(node)
+    elif node.tag == 'TableStruct':
+        return '＜表略＞'
     else:
         raise NotImplementedError(node.tag)
 
@@ -52,7 +46,7 @@ class BaseItemClass:
         self.children = [parse(child) for child in node[2:]]
 
     def __str__(self):
-        return '\n'.join([f'{self.title} {self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
+        return '\n'.join([f'{self.title}　{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
 
 
 class Part(BaseSectionClass):
@@ -122,7 +116,7 @@ class Paragraph:
 
     def __str__(self):
         if self.num:
-            return '\n'.join([f'{self.num} {self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
+            return '\n'.join([f'{self.num}　{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
         else:
             return '\n'.join([f'{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
 
