@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
 
-import sys
 import xml.etree.ElementTree as ET
 
 import requests
 
-from lawhub import law
-
 
 def fetch(law_num):
     url = f'https://elaws.e-gov.go.jp/api/1/lawdata/{law_num}'
-    return requests.get(url)
+    request = requests.get(url)
+    return ET.fromstring(request.text)
 
 
-def main(law_num):
-    tree = ET.fromstring(fetch(law_num).text)
-    main_node = tree.find('ApplData').find('LawFullText').find('Law').find('LawBody').find('MainProvision')
-    for node in main_node:
-        print(law.parse(node))
+def main(law_num, out_fp):
+    root = fetch(law_num)
+    main_provision = root.find('ApplData').find('LawFullText').find('Law').find('LawBody').find('MainProvision')
+    tree = ET.ElementTree(main_provision)
+    tree.write(out_fp, encoding='UTF-8')
 
 
 if __name__ == '__main__':
-    law_num = sys.argv[1]
-    main(law_num)
+    law_num = '平成二十一年法律第六十六号'
+    out_fp = './law.xml'
+    main(law_num, out_fp)
