@@ -56,8 +56,12 @@ class Query:
             raise ValueError(msg)
         return True
 
-    def has(self, law_div):
-        return self.get(law_div) != ''
+    def has(self, law_div, include_placeholder=False):
+        val = self.get(law_div)
+        if include_placeholder:
+            return len(val) > 0
+        else:
+            return len(val) > 0 and val[0] != '同'  # ignore '同条', '同項', '同号'
 
     def clear(self, law_div):
         return self.set(law_div, '')
@@ -74,17 +78,16 @@ class QueryCompensator:
         do_compensate = False
         for law_div in (LawDivision.GOU, LawDivision.KOU, LawDivision.JOU):  # bottom-up order for do_compensate
             if query.has(law_div):
+                self.context[law_div] = query.get(law_div)
                 do_compensate = True
-                val = query.get(law_div)
-                if val[0] != '同':  # '同条', '同項', '同号'
-                    self.context[law_div] = val
-            if do_compensate:
-                if law_div in self.context:
-                    query.set(law_div, self.context[law_div])
-                else:
+            elif query.has(law_div, include_placeholder=True):
+                if not(law_div in self.context):
                     msg = f'failed to compensate {law_div.name} for {query.text} from {self.context}'
-                    LOGGER.warning(msg)
-                    query.clear(law_div)  # clear '同条', '同項', '同号'
+                    raise ValueError(msg)
+                query.set(law_div, self.context[law_div])
+                do_compensate = True
+            elif do_compensate and law_div in self.context:
+                query.set(law_div, self.context[law_div])
         return query
 
 

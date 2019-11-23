@@ -15,16 +15,28 @@ class TestQuery(TestCase):
 class TestQueryCompensator(TestCase):
     def test_compensate_success(self):
         qc = QueryCompensator()
-        result1 = qc.compensate(Query('第一条第一項'))
-        result2 = qc.compensate(Query('同条中第三項'))
+        result1 = qc.compensate(Query('第一条第一号'))
+        result2 = qc.compensate(Query('同条中第三号'))
         result3 = qc.compensate(Query('第二条'))
-        result4 = qc.compensate(Query('第二項'))
+        result4 = qc.compensate(Query('第二号'))
+
+        self.assertEqual(result1.get(LawDivision.JOU), '第一条')
+        self.assertFalse(result1.has(LawDivision.KOU))
+        self.assertTrue(result1.get(LawDivision.GOU), '第一号')
 
         self.assertEqual(result2.get(LawDivision.JOU), '第一条')
+        self.assertFalse(result2.has(LawDivision.KOU))
+        self.assertTrue(result2.get(LawDivision.GOU), '第三号')
+
+        self.assertEqual(result3.get(LawDivision.JOU), '第二条')
+        self.assertFalse(result3.has(LawDivision.KOU))
+        self.assertFalse(result3.has(LawDivision.GOU))
+
         self.assertEqual(result4.get(LawDivision.JOU), '第二条')
+        self.assertFalse(result4.has(LawDivision.KOU))
+        self.assertEqual(result4.get(LawDivision.GOU), '第二号')
 
     def test_compensate_fail(self):
         qc = QueryCompensator()
-        result = qc.compensate(Query('同条中第三項'))
-        self.assertFalse(result.has(LawDivision.JOU))
-        self.assertTrue(result.has(LawDivision.KOU))
+        with self.assertRaises(ValueError):
+            qc.compensate(Query('同条中第三項'))
