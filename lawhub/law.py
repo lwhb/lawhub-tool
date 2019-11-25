@@ -28,12 +28,15 @@ def parse(node):
     elif node.tag == 'Subitem2':
         return Subitem2(node)
     elif node.tag == 'TableStruct':
-        return '＜表略＞'
+        return PlaceHolder('<表略>')
     else:
         raise NotImplementedError(node.tag)
 
 
 class BaseLawClass:
+    def __init__(self):
+        self.children = []
+
     def get_title(self):
         return ''
 
@@ -175,3 +178,12 @@ class Subitem2(BaseItemClass):
 
     def __str__(self):
         return INDENT * 3 + super().__str__()
+
+
+class PlaceHolder(BaseLawClass):
+    def __init__(self, string):
+        self.string = string
+        super().__init__()
+
+    def __str__(self):
+        return self.string

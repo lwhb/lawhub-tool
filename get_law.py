@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
+import logging
+import sys
 import xml.etree.ElementTree as ET
 
 import requests
+
+LOGGER = logging.getLogger(__name__)
 
 
 def fetch(law_num):
@@ -12,13 +16,19 @@ def fetch(law_num):
 
 
 def main(law_num, out_fp):
+    LOGGER.info(f'Trying to fetch {law_num}')
     root = fetch(law_num)
-    main_provision = root.find('ApplData').find('LawFullText').find('Law').find('LawBody').find('MainProvision')
+    try:
+        main_provision = root.find('ApplData').find('LawFullText').find('Law').find('LawBody').find('MainProvision')
+    except AttributeError as e:
+        LOGGER.error(f'failed to find MainProvision: {e}')
+        sys.exit(1)
     tree = ET.ElementTree(main_provision)
     tree.write(out_fp, encoding='UTF-8')
+    LOGGER.info(f'Saved {out_fp}')
 
 
 if __name__ == '__main__':
-    law_num = '平成二十一年法律第六十六号'
-    out_fp = './law.xml'
-    main(law_num, out_fp)
+    logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
+                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    main(sys.argv[1], sys.argv[2])

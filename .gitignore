@@ -11,6 +11,7 @@
 !.gitignore
 !*.md
 !*.py
+!*.sh
 !*.cfg
 
 # add all the filename I'm interested in.

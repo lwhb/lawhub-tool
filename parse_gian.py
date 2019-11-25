@@ -2,6 +2,7 @@
 
 import json
 import logging
+import sys
 
 from lawhub.action import Action, ActionType
 from lawhub.nlp import split_with_escape, normalize_last_verb
@@ -13,6 +14,7 @@ LOGGER = logging.getLogger(__name__)
 def main(in_fp, out_fp):
     with open(in_fp, 'r') as f:
         data = json.load(f)
+    LOGGER.info(f'Loaded {in_fp}')
 
     process_count = 0
     success_count = 0
@@ -38,11 +40,10 @@ def main(in_fp, out_fp):
                     f.write(f'{json.dumps(action.to_dict(), ensure_ascii=False)}\n')
                 success_count += 1
     LOGGER.info(f'Successfully parsed {success_count} / {process_count} lines')
+    LOGGER.info(f'Saved {out_fp}')
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    in_fp = '/Users/musui/lawhub/lawhub-spider/data/syuhou/195/4/houan.json'
-    out_fp = 'gian.jsonl'
-    main(in_fp, out_fp)
+    main(sys.argv[1], sys.argv[2])
