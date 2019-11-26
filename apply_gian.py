@@ -12,11 +12,7 @@ from lawhub.query import Query
 LOGGER = logging.getLogger(__name__)
 
 
-def main(law_fp, gian_fp, out_fp):
-    LOGGER.info(f"Trying to parse {law_fp}")
-    tree = ET.parse(law_fp)
-    nodes = [parse(node) for node in tree.getroot()]
-
+def build_query2node(nodes):
     query2node = dict()
     stack = [(node, '') for node in nodes]
     while len(stack) > 0:
@@ -30,6 +26,13 @@ def main(law_fp, gian_fp, out_fp):
                 query2node[query] = node
         for child in node.children[::-1]:
             stack.append((child, title))
+    return query2node
+
+def main(law_fp, gian_fp, out_fp):
+    LOGGER.info(f"Trying to parse {law_fp}")
+    tree = ET.parse(law_fp)
+    nodes = [parse(node) for node in tree.getroot()]
+    query2node = build_query2node(nodes)
 
     process_count = 0
     success_count = 0

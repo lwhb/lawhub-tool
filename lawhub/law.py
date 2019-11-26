@@ -22,18 +22,18 @@ class LawHierarchy(str, Enum):
     SUBITEM2 = '（１）'
 
 
-def extract_law_hierarchy(string, law_hierarchy):
-    if law_hierarchy not in LawHierarchy:
-        msg = f'invalid law division: {law_hierarchy}'
+def extract_law_hierarchy(string, hrchy):
+    if hrchy not in LawHierarchy:
+        msg = f'invalid law division: {hrchy}'
         raise ValueError(msg)
-    elif law_hierarchy == LawHierarchy.ARTICLE:
+    elif hrchy == LawHierarchy.ARTICLE:
         pattern = r'第[{0}]+条(の[{0}]+)*|同条'.format(NUMBER_KANJI)
-    elif law_hierarchy == LawHierarchy.SUBITEM1:
+    elif hrchy == LawHierarchy.SUBITEM1:
         pattern = r'[{0}]'.format(IROHA)
-    elif law_hierarchy == LawHierarchy.SUBITEM2:
+    elif hrchy == LawHierarchy.SUBITEM2:
         pattern = r'（[{0}]）'.format(NUMBER_ROMAN)
     else:
-        pattern = r'第[{0}]+{1}|同{1}'.format(NUMBER_KANJI, law_hierarchy.value)
+        pattern = r'第[{0}]+{1}|同{1}'.format(NUMBER_KANJI, hrchy.value)
 
     m = re.search(pattern, string)
     if m:
@@ -99,7 +99,7 @@ class BaseItemClass(BaseLawClass):
         return '\n'.join([f'{self.title}　{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
 
     def get_title(self):
-        return ''
+        return self.title
 
 
 class Part(BaseSectionClass):

@@ -10,11 +10,7 @@ do
     law_txt_bef=${dir}/law.txt.bef
     law_txt_aft=${dir}/law.txt.aft
 
-    if test -f ${gian_jsonl};then
-        echo "${gian_jsonl} already exists"
-    else
-        ./parse_gian.py ${gian_json} ${gian_jsonl}
-    fi
+    ./parse_gian.py ${gian_json} ${gian_jsonl}
 
     if test -f ${law_xml}; then
         echo "${law_xml} already exists"
