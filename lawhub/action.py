@@ -27,6 +27,7 @@ class Action:
     def __init_by_dict__(self, data):
         try:
             self.action_type = ActionType(data['action_type'])
+            self.text = data['text']
             if self.action_type in (ActionType.ADD, ActionType.DELETE):
                 self.at = Query(data['at'])
                 self.what = data['what']
@@ -44,28 +45,28 @@ class Action:
             msg = f'Failed to instantiate Action from {data}: {e}'
             raise ValueError(msg)
 
-    def __init_by_str__(self, sentence):
-        self.sentence = sentence
+    def __init_by_str__(self, text):
+        self.text = text
 
-        if self.__init_add__(sentence):
+        if self.__init_add__(text):
             self.action_type = ActionType.ADD
             return
-        elif self.__init_delete__(sentence):
+        elif self.__init_delete__(text):
             self.action_type = ActionType.DELETE
             return
-        elif self.__init_replace__(sentence):
+        elif self.__init_replace__(text):
             self.action_type = ActionType.REPLACE
             return
-        elif self.__init_rename__(sentence):
+        elif self.__init_rename__(text):
             self.action_type = ActionType.RENAME
             return
         else:
-            msg = f'failed to instantiate Action with sentence="{sentence}"'
+            msg = f'failed to instantiate Action with text="{text}"'
             raise ValueError(msg)
 
-    def __init_add__(self, sentence):
+    def __init_add__(self, text):
         pattern = r'(.*)に(.*)を加える'
-        m = re.match(pattern, sentence)
+        m = re.match(pattern, text)
         if m is None:
             return False
         else:
@@ -73,9 +74,9 @@ class Action:
             self.what = m.group(2)
             return True
 
-    def __init_delete__(self, sentence):
+    def __init_delete__(self, text):
         pattern = r'(.*)中「(.*)」を削る'
-        m = re.match(pattern, sentence)
+        m = re.match(pattern, text)
         if m is None:
             return False
         else:
@@ -83,9 +84,9 @@ class Action:
             self.what = m.group(2)
             return True
 
-    def __init_replace__(self, sentence):
+    def __init_replace__(self, text):
         pattern = r'(.*)中「(.*)」を「(.*)」に改める'
-        m = re.match(pattern, sentence)
+        m = re.match(pattern, text)
         if m is None:
             return False
         else:
@@ -94,9 +95,9 @@ class Action:
             self.new = m.group(3)
             return True
 
-    def __init_rename__(self, sentence):
+    def __init_rename__(self, text):
         pattern = r'(.*)を(.*)とする'
-        m = re.match(pattern, sentence)
+        m = re.match(pattern, text)
         if m is None:
             return False
         else:
@@ -105,7 +106,10 @@ class Action:
             return True
 
     def to_dict(self):
-        ret = {'action_type': self.action_type.value}
+        ret = {
+            'action_type': self.action_type.value,
+            'text': self.text
+        }
         if self.action_type in (ActionType.ADD, ActionType.DELETE):
             ret['at'] = self.at.to_dict()
             ret['what'] = self.what
