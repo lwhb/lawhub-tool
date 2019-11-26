@@ -1,16 +1,9 @@
-import re
-from enum import Enum
+from collections import defaultdict
 from logging import getLogger
 
-from lawhub.constants import NUMBER_KANJI
+from lawhub.law import LawHierarchy, extract_law_hierarchy
 
 LOGGER = getLogger(__name__)
-
-
-class LawDivision(str, Enum):
-    JOU = 'jou'
-    KOU = 'kou'
-    GOU = 'gou'
 
 
 class Query:
@@ -26,73 +19,53 @@ class Query:
     def __init_by_dict__(self, data):
         try:
             self.text = data['text']
-            self.jou = data['jou']
-            self.kou = data['kou']
-            self.gou = data['gou']
+            self.hierarchy = data['hierarchy']  # ToDo: wrap with defaultdict
         except KeyError as e:
             msg = f'Failed to instantiate Query from {data}'
             raise ValueError(msg)
 
     def __init_by_str__(self, text):
         self.text = text
-        self.jou = ''
-        self.kou = ''
-        self.gou = ''
+        self.hierarchy = defaultdict(lambda: '')
 
-        for law_div in LawDivision:
-            val = extract_law_division(text, law_div)
+        for law_hrchy in LawHierarchy:
+            val = extract_law_hierarchy(text, law_hrchy)
             if val != '':
-                self.set(law_div, val)
-
-    def __repr__(self):
-        return f'<Query text={self.text} jou={self.jou} kou={self.kou} gou={self.gou}>'
+                self.set(law_hrchy, val)
 
     def __eq__(self, other):
         if not (isinstance(other, Query)):
             return False
-        return self.jou == other.jou and self.kou == other.kou and self.gou == other.gou
+        return self.hierarchy == other.hierarchy
 
     def __hash__(self):
-        return hash(self.jou + self.kou + self.gou)
+        return hash(self.hierarchy)
 
-    def get(self, law_div):
-        if law_div == LawDivision.JOU:
-            return self.jou
-        elif law_div == LawDivision.KOU:
-            return self.kou
-        elif law_div == LawDivision.GOU:
-            return self.gou
-        else:
-            msg = f'invalid law division: {law_div}'
-            raise ValueError(msg)
+    def get(self, law_hrchy):
+        return self.hierarchy[law_hrchy]
 
-    def set(self, law_div, val):
-        if law_div == LawDivision.JOU:
-            self.jou = val
-        elif law_div == LawDivision.KOU:
-            self.kou = val
-        elif law_div == LawDivision.GOU:
-            self.gou = val
-        else:
-            msg = f'invalid law division: {law_div}'
-            raise ValueError(msg)
+    def set(self, law_hrchy, val):
+        self.hierarchy[law_hrchy] = val
         return True
 
-    def has(self, law_div, include_placeholder=False):
-        val = self.get(law_div)
+    def has(self, law_hrchy, include_placeholder=False):
+        val = self.get(law_hrchy)
         if include_placeholder:
             return len(val) > 0
         else:
             return len(val) > 0 and val[0] != '同'  # ignore '同条', '同項', '同号'
 
-    def clear(self, law_div):
-        return self.set(law_div, '')
+    def clear(self, law_hrchy):
+        return self.set(law_hrchy, '')
 
     def is_empty(self):
-        return not(self.has(LawDivision.JOU) or self.has(LawDivision.KOU) or self.has(LawDivision.GOU))
+        for val in self.hierarchy.values():
+            if val != '':
+                return False
+        return True
 
     def to_dict(self):
-        return {'text': self.text, 'jou': self.jou, 'kou': self.kou, 'gou': self.gou}
+        return {'text': self.text, 'hierarchy': self.hierarchy}
 
 
 class QueryCompensator:
@@ -101,36 +74,18 @@ class QueryCompensator:
 
     def compensate(self, query):
         do_compensate = False
-        for law_div in (LawDivision.GOU, LawDivision.KOU, LawDivision.JOU):  # bottom-up order for do_compensate
-            if query.has(law_div):
-                self.context[law_div] = query.get(law_div)
+        for law_hrchy in (LawHierarchy.ITEM, LawHierarchy.PARAGRAPH, LawHierarchy.ARTICLE):  # bottom-up order for do_compensate
+            if query.has(law_hrchy):
+                self.context[law_hrchy] = query.get(law_hrchy)
                 do_compensate = True
-            elif query.has(law_div, include_placeholder=True):
-                if not(law_div in self.context):
-                    msg = f'failed to compensate {law_div.name} for {query.text} from {self.context}'
+            elif query.has(law_hrchy, include_placeholder=True):
+                if not (law_hrchy in self.context):
+                    msg = f'failed to compensate {law_hrchy.name} for {query.text} from {self.context}'
                     raise ValueError(msg)
-                query.set(law_div, self.context[law_div])
+                query.set(law_hrchy, self.context[law_hrchy])
                 do_compensate = True
-            elif do_compensate and law_div in self.context:
-                query.set(law_div, self.context[law_div])
-            elif do_compensate and law_div == LawDivision.KOU:  # AdHoc fix for cases like "第四条第二号"
-                query.set(law_div, '第一項')
+            elif do_compensate and law_hrchy in self.context:
+                query.set(law_hrchy, self.context[law_hrchy])
+            # elif do_compensate and law_hrchy == LawHierarchy.PARAGRAPH:  # AdHoc fix for cases like "第四条第二号"
+            #     query.set(law_hrchy, '第一項')
         return query
-
-
-def extract_law_division(string, law_div):
-    if law_div == LawDivision.JOU:
-        pattern = r'第[{0}]+条(の[{0}]+)?|同条'.format(NUMBER_KANJI)
-    elif law_div == LawDivision.KOU:
-        pattern = r'第[{0}]+項|同項'.format(NUMBER_KANJI)
-    elif law_div == LawDivision.GOU:
-        pattern = r'第[{0}]+号|同号'.format(NUMBER_KANJI)
-    else:
-        msg = f'invalid law division: {law_div}'
-        raise ValueError(msg)
-
-    m = re.search(pattern, string)
-    if m:
-        return m.group()
-    else:
-        return ''

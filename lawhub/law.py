@@ -1,9 +1,45 @@
+import re
+from enum import Enum
 from logging import getLogger
 
+from lawhub.constants import NUMBER_KANJI, IROHA, NUMBER_ROMAN
 from lawhub.kanzize import int2kanji
 
 LOGGER = getLogger(__name__)
 INDENT = ' ' * 4
+
+
+class LawHierarchy(str, Enum):
+    PART = '編'
+    CHAPTER = '章'
+    SECTION = '節'
+    SUBSECTION = '款'
+    DIVISION = '目'
+    ARTICLE = '条'
+    PARAGRAPH = '項'
+    ITEM = '号'
+    SUBITEM1 = 'イ'
+    SUBITEM2 = '（１）'
+
+
+def extract_law_hierarchy(string, law_hierarchy):
+    if law_hierarchy not in LawHierarchy:
+        msg = f'invalid law division: {law_hierarchy}'
+        raise ValueError(msg)
+    elif law_hierarchy == LawHierarchy.ARTICLE:
+        pattern = r'第[{0}]+条(の[{0}]+)*|同条'.format(NUMBER_KANJI)
+    elif law_hierarchy == LawHierarchy.SUBITEM1:
+        pattern = r'[{0}]'.format(IROHA)
+    elif law_hierarchy == LawHierarchy.SUBITEM2:
+        pattern = r'（[{0}]）'.format(NUMBER_ROMAN)
+    else:
+        pattern = r'第[{0}]+{1}|同{1}'.format(NUMBER_KANJI, law_hierarchy.value)
+
+    m = re.search(pattern, string)
+    if m:
+        return m.group()
+    else:
+        return ''
 
 
 def parse(node):
