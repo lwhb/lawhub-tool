@@ -1,4 +1,3 @@
-from collections import defaultdict
 from logging import getLogger
 
 from lawhub.law import LawHierarchy, extract_law_hierarchy
@@ -35,8 +34,10 @@ class Query:
     def __eq__(self, other):
         if not (isinstance(other, Query)):
             return False
-
-        return self.hierarchy == other.hierarchy
+        for hrchy in Query.law_hierarchy_lst:
+            if self.get(hrchy) != other.get(hrchy):
+                return False
+        return True
 
     def __hash__(self):
         return hash(''.join(map(lambda x: self.get(x), Query.law_hierarchy_lst)))
@@ -89,6 +90,6 @@ class QueryCompensator:
                 do_compensate = True
             elif do_compensate and hrchy in self.context:
                 query.set(hrchy, self.context[hrchy])
-            # elif do_compensate and hrchy == LawHierarchy.PARAGRAPH:  # AdHoc fix for cases like "第四条第二号"
-            #     query.set(hrchy, '第一項')
+        if do_compensate and not (query.has(LawHierarchy.PARAGRAPH)):
+            query.set(LawHierarchy.PARAGRAPH, '第一項')
         return query

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
 import json
 import logging
+import sys
 import xml.etree.ElementTree as ET
 
 from lawhub.action import Action, ActionType
@@ -28,6 +28,7 @@ def build_query2node(nodes):
             stack.append((child, title))
     return query2node
 
+
 def main(law_fp, gian_fp, out_fp):
     LOGGER.info(f"Trying to parse {law_fp}")
     tree = ET.parse(law_fp)
@@ -41,20 +42,20 @@ def main(law_fp, gian_fp, out_fp):
         for line in f:
             if line[:2] == '!!' or line[:2] == '//':
                 continue
-            process_count += 1
             action = Action(json.loads(line))
             if action.action_type == ActionType.REPLACE:
-                if action.at in query2node:
-                    node = query2node[action.at]
-                    if not(hasattr(node, 'sentence')) or action.old not in node.sentence:
-                        LOGGER.error(f'\"{action.old}\" does not exist in \"{action.at}\"')
-                        continue
-                    node.sentence = node.sentence.replace(action.old, action.new)
-                    LOGGER.debug(f'Replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
-                    success_count += 1
-                else:
+                process_count += 1
+                if action.at not in query2node:
                     LOGGER.error(f'failed to locate \"{action.at}\"')
-    LOGGER.info(f'Successfully parsed {success_count} / {process_count} lines')
+                    continue
+                node = query2node[action.at]
+                if not (hasattr(node, 'sentence')) or action.old not in node.sentence:
+                    LOGGER.error(f'\"{action.old}\" does not exist in \"{action.at}\"')
+                    continue
+                node.sentence = node.sentence.replace(action.old, action.new)
+                LOGGER.debug(f'Replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
+                success_count += 1
+    LOGGER.info(f'Successfully applied {success_count} / {process_count} actions')
 
     with open(out_fp, 'w') as f:
         for node in nodes:
@@ -63,6 +64,6 @@ def main(law_fp, gian_fp, out_fp):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, datefmt="%m/%d/%Y %I:%M:%S",
+    logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     main(sys.argv[1], sys.argv[2], sys.argv[3])
