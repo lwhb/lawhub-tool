@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 
+"""
+法令番号(e.g. 昭和三十五年法律第百四十五号)を受け取り、e-gov法令APIから取得したXMLを保存する
+
+e-gov法令API仕様: https://www.e-gov.go.jp/elaws/interface_api/index.html
+"""
+
 import logging
 import sys
 import xml.etree.ElementTree as ET
 
 import requests
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('get_law')
 
 
 def fetch(law_num):

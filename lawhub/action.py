@@ -15,6 +15,10 @@ class ActionType(str, Enum):
 
 
 class Action:
+    """
+    法改正のActionを表現するクラス
+    """
+
     def __init__(self, obj):
         if isinstance(obj, dict):
             self.__init_by_dict__(obj)
@@ -121,7 +125,7 @@ class Action:
             ret['old'] = self.old.to_dict()
             ret['new'] = self.new.to_dict()
         else:
-            msg = 'unknown ActionType={self.action_type}'
+            msg = f'unknown ActionType={self.action_type}'
             raise NotImplementedError(msg)
         return ret
 
@@ -135,7 +139,7 @@ class Action:
         elif self.action_type == ActionType.RENAME:
             return f'<RENAME old={self.old.text} new={self.new.text}>'
         else:
-            msg = 'unknown ActionType={self.action_type}'
+            msg = f'unknown ActionType={self.action_type}'
             raise NotImplementedError(msg)
 
     def __eq__(self, other):
@@ -152,5 +156,5 @@ class Action:
         elif self.action_type == ActionType.RENAME:
             return self.old == other.old and self.new == other.old
         else:
-            msg = 'unknown ActionType={self.action_type}'
+            msg = f'unknown ActionType={self.action_type}'
             raise NotImplementedError(msg)

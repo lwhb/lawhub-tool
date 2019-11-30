@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+議案ファイル（.json)を受け取り、mainをパースした結果をJSON Lines形式で保存する
+
+ToDo: 複数の法律を改正している場合に対応するため、一つのファイルではなく複数のファイルに出力する様にする (ISSUE-3)
+"""
+
 import json
 import logging
 import sys
@@ -8,7 +14,7 @@ from lawhub.action import Action, ActionType
 from lawhub.nlp import split_with_escape, normalize_last_verb
 from lawhub.query import QueryCompensator
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('parse_gian')
 
 
 def main(in_fp, out_fp):

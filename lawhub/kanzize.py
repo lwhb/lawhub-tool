@@ -1,5 +1,5 @@
 """
-ref: https://github.com/delta114514/Kanjize
+Copy and pasted from https://github.com/delta114514/Kanjize
 """
 
 from warnings import warn

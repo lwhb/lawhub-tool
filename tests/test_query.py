@@ -6,12 +6,12 @@ from lawhub.query import Query, QueryCompensator
 
 class TestQuery(TestCase):
     def test_query(self):
-        text = '第一条第一項第一号'
+        text = '第一条第二項第三号'
         query = Query(text)
 
         self.assertEqual('第一条', query.get(LawHierarchy.ARTICLE))
-        self.assertEqual('第一項', query.get(LawHierarchy.PARAGRAPH))
-        self.assertEqual('第一号', query.get(LawHierarchy.ITEM))
+        self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
+        self.assertEqual('第三号', query.get(LawHierarchy.ITEM))
 
 
 class TestQueryCompensator(TestCase):

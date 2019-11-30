@@ -6,6 +6,12 @@ LOGGER = getLogger(__name__)
 
 
 class Query:
+    """
+    法令内の位置を表現するクラス
+
+    ToDo: 現状LawHierarchyの粒度でしか位置を表現できない、複数の位置を表現できないという問題がある(ISSUE-2)
+    """
+
     law_hierarchy_lst = [LawHierarchy.ARTICLE, LawHierarchy.PARAGRAPH, LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2]
 
     def __init__(self, obj):
@@ -73,6 +79,10 @@ class Query:
 
 
 class QueryCompensator:
+    """
+    文脈を元にQueryを補完するクラス。Actionを独立して適用できるよう「同項」といった自然言語の省略表現を冗長に書き下す必要がある
+    """
+
     def __init__(self):
         self.context = dict()
 

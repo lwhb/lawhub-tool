@@ -10,6 +10,10 @@ INDENT = ' ' * 4
 
 
 class LawHierarchy(str, Enum):
+    """
+    e-gov法令APIのXMLにおける階層名の一覧
+    """
+
     PART = '編'
     CHAPTER = '章'
     SECTION = '節'
@@ -43,6 +47,12 @@ def extract_law_hierarchy(string, hrchy):
 
 
 def parse(node):
+    """
+    XMLのnodeを与えられて、再帰的に子ノードまでBaseLawClassに変換した結果を返す
+
+    :param node: node in XML tree
+    :return: node in BaseLawClass tree
+    """
     if node.tag == 'Part':
         return Part(node)
     elif node.tag == 'Chapter':
@@ -72,6 +82,9 @@ def parse(node):
 class BaseLawClass:
     def __init__(self):
         self.children = []
+
+    def __str__(self):
+        return ''
 
     def get_title(self):
         return ''
