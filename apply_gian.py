@@ -22,12 +22,16 @@ def build_query2node(nodes):
     while len(stack) > 0:
         node, upper_title = stack.pop()
         title = upper_title + node.get_title()
-        query = Query(title)
-        if not (query.is_empty()) and node.get_title() != '':
-            if query in query2node:
-                LOGGER.debug(f'duplicated query({query}) for {type(node)}')
-            else:
-                query2node[query] = node
+        try:
+            query = Query(title)
+        except Exception as e:
+            LOGGER.debug(e)
+        else:
+            if not (query.is_empty()) and node.get_title() != '':
+                if query in query2node:
+                    LOGGER.debug(f'duplicated query({query}) for {type(node)}')
+                else:
+                    query2node[query] = node
         for child in node.children[::-1]:
             stack.append((child, title))
     return query2node
@@ -68,6 +72,6 @@ def main(law_fp, gian_fp, out_fp):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, datefmt="%m/%d/%Y %I:%M:%S",
+    logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     main(sys.argv[1], sys.argv[2], sys.argv[3])
