@@ -8,6 +8,7 @@ class TestAction(TestCase):
     def test_init_add(self):
         text = '第二条に次の二項を加える'
         action = Action(text)
+
         self.assertEqual(action.at, Query('第二条'))
         self.assertEqual(action.what, '次の二項')
 

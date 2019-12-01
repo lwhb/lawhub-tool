@@ -51,83 +51,74 @@ class Action:
 
     def __init_by_str__(self, text):
         self.text = text
-
         if self.__init_add__(text):
             self.action_type = ActionType.ADD
-            return
         elif self.__init_delete__(text):
             self.action_type = ActionType.DELETE
-            return
         elif self.__init_replace__(text):
             self.action_type = ActionType.REPLACE
-            return
         elif self.__init_rename__(text):
             self.action_type = ActionType.RENAME
-            return
         else:
-            msg = f'failed to instantiate Action with text="{text}"'
+            msg = f'failed to instantiate Action from text="{text}"'
             raise ValueError(msg)
 
     def __init_add__(self, text):
         pattern = r'(.*)に(.*)を加える'
-        m = re.match(pattern, text)
-        if m is None:
-            return False
-        else:
-            self.at = Query(m.group(1))
-            self.what = m.group(2)
+        match = re.match(pattern, text)
+        if match:
+            self.at = Query(match.group(1))
+            self.what = match.group(2)
             return True
+        return False
 
     def __init_delete__(self, text):
         pattern = r'(.*)中「(.*)」を削る'
-        m = re.match(pattern, text)
-        if m is None:
-            return False
-        else:
-            self.at = Query(m.group(1))
-            self.what = m.group(2)
+        match = re.match(pattern, text)
+        if match:
+            self.at = Query(match.group(1))
+            self.what = match.group(2)
             return True
+        return False
 
     def __init_replace__(self, text):
         pattern = r'(.*)中「(.*)」を「(.*)」に改める'
-        m = re.match(pattern, text)
-        if m is None:
-            return False
-        else:
-            self.at = Query(m.group(1))
-            self.old = m.group(2)
-            self.new = m.group(3)
+        match = re.match(pattern, text)
+        if match:
+            self.at = Query(match.group(1))
+            self.old = match.group(2)
+            self.new = match.group(3)
             return True
+        return False
 
     def __init_rename__(self, text):
         pattern = r'(.*)を(.*)とする'
-        m = re.match(pattern, text)
-        if m is None:
-            return False
-        else:
-            self.old = Query(m.group(1))
-            self.new = Query(m.group(2))
+        match = re.match(pattern, text)
+        if match:
+            self.old = Query(match.group(1))
+            self.new = Query(match.group(2))
             return True
+        return False
 
     def to_dict(self):
-        ret = {
+        data = {
             'action_type': self.action_type.value,
             'text': self.text
         }
         if self.action_type in (ActionType.ADD, ActionType.DELETE):
-            ret['at'] = self.at.to_dict()
-            ret['what'] = self.what
+            data['at'] = self.at.to_dict()
+            data['what'] = self.what
         elif self.action_type == ActionType.REPLACE:
-            ret['at'] = self.at.to_dict()
-            ret['old'] = self.old
-            ret['new'] = self.new
+            data['at'] = self.at.to_dict()
+            data['old'] = self.old
+            data['new'] = self.new
         elif self.action_type == ActionType.RENAME:
-            ret['old'] = self.old.to_dict()
-            ret['new'] = self.new.to_dict()
+            data['old'] = self.old.to_dict()
+            data['new'] = self.new.to_dict()
         else:
             msg = f'unknown ActionType={self.action_type}'
             raise NotImplementedError(msg)
-        return ret
+        return data
 
     def __repr__(self):
         if self.action_type == ActionType.ADD:
