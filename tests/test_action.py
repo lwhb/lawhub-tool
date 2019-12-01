@@ -20,10 +20,10 @@ class TestAction(TestCase):
         self.assertEqual(action.what, 'その他')
 
     def test_init_replace(self):
-        text = '目次中「第百二十五条」を「第百二十五条の二」に改める'
+        text = '第一条中「第百二十五条」を「第百二十五条の二」に改める'
         action = Action(text)
 
-        self.assertEqual(action.at, Query('目次'))
+        self.assertEqual(action.at, Query('第一条'))
         self.assertEqual(action.old, '第百二十五条')
         self.assertEqual(action.new, '第百二十五条の二')
 
