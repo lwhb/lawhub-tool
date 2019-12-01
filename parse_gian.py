@@ -46,10 +46,15 @@ def split_to_chunks(lines):
 
 
 def main(in_fp):
-    with open(in_fp, 'r') as f:
-        data = json.load(f)
-        lines = data['main'].split('\n')
-        chunks = split_to_chunks(lines)
+    try:
+        with open(in_fp, 'r') as f:
+            data = json.load(f)
+            lines = data['main'].split('\n')
+            chunks = split_to_chunks(lines)
+    except Exception as e:
+        msg = f'Failed to load Gian from {in_fp}'
+        LOGGER.error(msg)
+        sys.exit(1)
     LOGGER.info(f'Loaded {len(lines)} lines ({len(chunks)} chunks) from {in_fp}')
 
     process_count = 0

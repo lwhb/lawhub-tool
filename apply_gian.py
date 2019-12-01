@@ -37,15 +37,20 @@ def build_query2node(nodes):
     return query2node
 
 
-def main(law_fp, gian_fp, out_fp):
+def main(gian_fp, law_fp, out_fp):
     LOGGER.info(f'Start to parse {law_fp}')
-    tree = ET.parse(law_fp)
-    nodes = [parse(node) for node in tree.getroot()]
-    query2node = build_query2node(nodes)
+    try:
+        tree = ET.parse(law_fp)
+        nodes = [parse(node) for node in tree.getroot()]
+        query2node = build_query2node(nodes)
+    except Exception as e:
+        msg = f'failed to parse: {e}'
+        LOGGER.error(msg)
+        sys.exit(1)
 
     process_count = 0
     success_count = 0
-    LOGGER.info(f'Start to process {gian_fp}')
+    LOGGER.info(f'Start to apply {gian_fp}')
     with open(gian_fp, 'r') as f:
         for line in f:
             if line[:2] == '!!' or line[:2] == '//':
@@ -54,11 +59,11 @@ def main(law_fp, gian_fp, out_fp):
             if action.action_type == ActionType.REPLACE:
                 process_count += 1
                 if action.at not in query2node:
-                    LOGGER.error(f'failed to locate \"{action.at}\"')
+                    LOGGER.warning(f'failed to locate \"{action.at}\"')
                     continue
                 node = query2node[action.at]
                 if not (hasattr(node, 'sentence')) or action.old not in node.sentence:
-                    LOGGER.error(f'\"{action.old}\" does not exist in \"{action.at}\"')
+                    LOGGER.warning(f'\"{action.old}\" does not exist in \"{action.at}\"')
                     continue
                 node.sentence = node.sentence.replace(action.old, action.new)
                 LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')

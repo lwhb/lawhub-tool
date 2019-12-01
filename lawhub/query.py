@@ -28,9 +28,6 @@ class Query:
         else:
             msg = f'Failed to instantiate Query from {type(obj)}'
             raise NotImplementedError(msg)
-        if self.is_empty():
-            msg = f'Empty query is not allowed'
-            raise ValueError(msg)
 
     def __init_by_dict__(self, data):
         try:
