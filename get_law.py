@@ -32,11 +32,25 @@ def fetch_law(law_num):
 
 
 def extract_law_num(jsonl_fp):
+    """
+    JSONLineを受け取り、法令番号が存在すれば返す
+    :param jsonl_fp:
+    :return: 法令番号又は改正行が存在しなければNone
+    :raises ValueError: 改正行はあるが法令番号が取得できなかった場合
+    """
+    target_line = None
     with open(jsonl_fp, 'r') as f:
-        match = re.search(PATTERN_LAW_NUMBER, f.read())
-        if match:
-            return match.group()
-    return None
+        for line in f:
+            if 'の一部を次のように改正する' in line:
+                target_line = line.strip()
+    if target_line is None:
+        return None
+    pattern = r'（({})）の一部を次のように改正する'.format(PATTERN_LAW_NUMBER)
+    match = re.search(pattern, target_line)
+    if match is None:
+        msg = f'failed to extract law number from {target_line}'
+        raise ValueError(msg)
+    return match.group(1)
 
 
 def main(jsonl_fp, xml_fp):
@@ -47,10 +61,14 @@ def main(jsonl_fp, xml_fp):
         sys.exit(0)
     LOGGER.info(f'{xml_fp} does not exist yet')
 
-    law_num = extract_law_num(jsonl_fp)
-    if law_num is None:
-        LOGGER.error(f'Failed to extract target law number from {jsonl_fp}')
+    try:
+        law_num = extract_law_num(jsonl_fp)
+    except ValueError as e:
+        LOGGER.error(e)
         sys.exit(1)
+    if law_num is None:
+        LOGGER.info(f'{jsonl_fp} does not contain Kaisei line')
+        sys.exit(0)
     LOGGER.info(f'Extracted target law: {law_num}')
 
     try:

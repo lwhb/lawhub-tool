@@ -24,6 +24,7 @@ def build_query2node(nodes):
         title = upper_title + node.get_title()
         try:
             query = Query(title)
+            LOGGER.debug(f'found {query}')
         except Exception as e:
             LOGGER.debug(e)
         else:

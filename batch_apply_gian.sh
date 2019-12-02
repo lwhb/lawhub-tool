@@ -8,10 +8,9 @@ dataset=./data/jsonl.list
 
 IFS=$'\t'
 while read -r gian; do
-  dir=$(dirname "${gian}")
   law=${gian%.*}.xml
-  bef=${dir}/law.txt.bef
-  aft=${dir}/law.txt.aft
+  bef=${gian%.*}.bef
+  aft=${gian%.*}.aft
 
   ./get_law.py "${gian}" "${law}"
   if test -f "${law}"; then

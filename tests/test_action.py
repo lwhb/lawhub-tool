@@ -9,30 +9,30 @@ class TestAction(TestCase):
         text = '第二条に次の二項を加える'
         action = Action(text)
 
-        self.assertEqual(action.at, Query('第二条'))
-        self.assertEqual(action.what, '次の二項')
+        self.assertEqual(Query('第二条'), action.at)
+        self.assertEqual('次の二項', action.what)
 
     def test_init_delete(self):
         text = '第十四条中「その他」を削る'
         action = Action(text)
 
-        self.assertEqual(action.at, Query('第十四条'))
-        self.assertEqual(action.what, 'その他')
+        self.assertEqual(Query('第十四条'), action.at)
+        self.assertEqual('その他', action.what)
 
     def test_init_replace(self):
         text = '第一条中「第百二十五条」を「第百二十五条の二」に改める'
         action = Action(text)
 
-        self.assertEqual(action.at, Query('第一条'))
-        self.assertEqual(action.old, '第百二十五条')
-        self.assertEqual(action.new, '第百二十五条の二')
+        self.assertEqual(Query('第一条'), action.at)
+        self.assertEqual('第百二十五条', action.old)
+        self.assertEqual('第百二十五条の二', action.new)
 
     def test_init_rename(self):
         text = '一条中第三項を第四項とする'
         action = Action(text)
 
-        self.assertEqual(action.old, Query('一条中第三項'))
-        self.assertEqual(action.new, Query('第四項'))
+        self.assertEqual(Query('一条中第三項'), action.old)
+        self.assertEqual(Query('第四項'), action.new)
 
     def test_init_fail(self):
         text = 'ランダムな文'

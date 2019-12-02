@@ -33,10 +33,10 @@ class TestQuery(TestCase):
         self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
         self.assertEqual('第三号', query.get(LawHierarchy.ITEM))
 
-    def test_init_multiple_fail(self):
-        text = '第一条及び第二条'
-        with self.assertRaises(NotImplementedError):
-            Query(text)
+    # def test_init_multiple_fail(self):
+    #     text = '第一条及び第二条'
+    #     with self.assertRaises(NotImplementedError):
+    #         Query(text)
 
 
 class TestQueryCompensator(TestCase):

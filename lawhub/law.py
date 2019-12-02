@@ -89,6 +89,9 @@ class BaseLawClass:
     def __str__(self):
         return ''
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {self.get_title()}>'
+
     def get_title(self):
         return ''
 
