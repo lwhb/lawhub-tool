@@ -22,26 +22,36 @@ def build_query2node(nodes):
     while len(stack) > 0:
         node, upper_title = stack.pop()
         title = upper_title + node.get_title()
-        query = Query(title)
-        if not (query.is_empty()) and node.get_title() != '':
-            if query in query2node:
-                LOGGER.debug(f'duplicated query({query}) for {type(node)}')
-            else:
-                query2node[query] = node
+        try:
+            query = Query(title)
+            LOGGER.debug(f'found {query}')
+        except Exception as e:
+            LOGGER.debug(e)
+        else:
+            if not (query.is_empty()) and node.get_title() != '':
+                if query in query2node:
+                    LOGGER.debug(f'duplicated query({query}) for {type(node)}')
+                else:
+                    query2node[query] = node
         for child in node.children[::-1]:
             stack.append((child, title))
     return query2node
 
 
-def main(law_fp, gian_fp, out_fp):
+def main(gian_fp, law_fp, out_fp):
     LOGGER.info(f'Start to parse {law_fp}')
-    tree = ET.parse(law_fp)
-    nodes = [parse(node) for node in tree.getroot()]
-    query2node = build_query2node(nodes)
+    try:
+        tree = ET.parse(law_fp)
+        nodes = [parse(node) for node in tree.getroot()]
+        query2node = build_query2node(nodes)
+    except Exception as e:
+        msg = f'failed to parse: {e}'
+        LOGGER.error(msg)
+        sys.exit(1)
 
     process_count = 0
     success_count = 0
-    LOGGER.info(f'Start to process {gian_fp}')
+    LOGGER.info(f'Start to apply {gian_fp}')
     with open(gian_fp, 'r') as f:
         for line in f:
             if line[:2] == '!!' or line[:2] == '//':
@@ -50,11 +60,11 @@ def main(law_fp, gian_fp, out_fp):
             if action.action_type == ActionType.REPLACE:
                 process_count += 1
                 if action.at not in query2node:
-                    LOGGER.error(f'failed to locate \"{action.at}\"')
+                    LOGGER.warning(f'failed to locate \"{action.at}\"')
                     continue
                 node = query2node[action.at]
                 if not (hasattr(node, 'sentence')) or action.old not in node.sentence:
-                    LOGGER.error(f'\"{action.old}\" does not exist in \"{action.at}\"')
+                    LOGGER.warning(f'\"{action.old}\" does not exist in \"{action.at}\"')
                     continue
                 node.sentence = node.sentence.replace(action.old, action.new)
                 LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
@@ -68,6 +78,6 @@ def main(law_fp, gian_fp, out_fp):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, datefmt="%m/%d/%Y %I:%M:%S",
+    logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     main(sys.argv[1], sys.argv[2], sys.argv[3])

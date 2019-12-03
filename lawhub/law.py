@@ -75,8 +75,11 @@ def parse(node):
         return Subitem2(node)
     elif node.tag == 'TableStruct':
         return PlaceHolder('<表略>')
+    elif node.tag == 'List':
+        return PlaceHolder('<一覧略>')
     else:
-        raise NotImplementedError(node.tag)
+        msg = f'Unknown Element {node.tag}: {node}'
+        raise NotImplementedError(msg)
 
 
 class BaseLawClass:
@@ -85,6 +88,9 @@ class BaseLawClass:
 
     def __str__(self):
         return ''
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {self.get_title()}>'
 
     def get_title(self):
         return ''

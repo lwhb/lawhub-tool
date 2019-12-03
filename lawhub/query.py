@@ -28,9 +28,6 @@ class Query:
         else:
             msg = f'Failed to instantiate Query from {type(obj)}'
             raise NotImplementedError(msg)
-        if self.is_empty():
-            msg = f'Empty query is not allowed'
-            raise ValueError(msg)
 
     def __init_by_dict__(self, data):
         try:
@@ -45,9 +42,9 @@ class Query:
 
     def __init_by_str__(self, text):
         self.text = text
-        if '及び' in self.text:
-            msg = f'Multiple type query is not supported yet'
-            raise NotImplementedError(msg)  # ToDo: 複数箇所を指定している場合に対応する
+        # if '及び' in self.text:
+        #     msg = f'Multiple type query is not supported yet: {self.text}'
+        #     raise NotImplementedError(msg)  # ToDo: 複数箇所を指定している場合に対応する
 
         if self.__init_after_word__(text):
             self.query_type = QueryType.AFTER_WORD
