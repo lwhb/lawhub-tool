@@ -46,7 +46,7 @@ def main(gian_fp, law_fp, out_fp, stat_fp):
         nodes = [parse(node) for node in tree.getroot()]
         query2node = build_query2node(nodes)
     except Exception as e:
-        msg = f'failed to parse: {e}'
+        msg = f'failed to parse {law_fp}: {e}'
         LOGGER.error(msg)
         sys.exit(1)
 
@@ -72,7 +72,7 @@ def main(gian_fp, law_fp, out_fp, stat_fp):
                 LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
                 success_count += 1
     LOGGER.info(f'Successfully applied {success_count} / {process_count} actions')
-    stats_factory.add({'jsnol': gian_fp, 'process': process_count, 'success': success_count})
+    stats_factory.add({'jsonl': gian_fp, 'process': process_count, 'success': success_count})
     stats_factory.commit(stat_fp)
 
     with open(out_fp, 'w') as f:
