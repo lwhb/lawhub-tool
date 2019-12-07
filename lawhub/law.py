@@ -1,4 +1,5 @@
 import re
+import xml.etree.ElementTree as ET
 from enum import Enum
 from logging import getLogger
 
@@ -44,6 +45,14 @@ def extract_law_hierarchy(string, hrchy):
         return m.group()
     else:
         return ''
+
+
+def extract_text_from_sentence(node):
+    text = ET.tostring(node, encoding="unicode")
+    text = text.replace('\n', '')
+    text = re.sub(r'<Ruby>([^<>]*)<Rt>([^<>]*)</Rt></Ruby>', r'\1', text)  # replace <Ruby>
+    text = re.sub(r'<[^<>]*>', '', text)  # replace all tags
+    return text
 
 
 def parse(node):
@@ -111,7 +120,7 @@ class BaseSectionClass(BaseLawClass):
 class BaseItemClass(BaseLawClass):
     def __init__(self, node):
         self.title = node[0].text
-        self.sentence = INDENT.join(map(lambda n: n.text, node[1].findall('.//Sentence')))
+        self.sentence = INDENT.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
         self.children = [parse(child) for child in node[2:]]
 
     def __str__(self):
@@ -186,7 +195,7 @@ class Paragraph(BaseLawClass):
         assert node[0].tag == 'ParagraphNum'
         assert node[1].tag == 'ParagraphSentence'
         self.num = int(node[0].text) if node[0].text else None
-        self.sentence = node[1][0].text
+        self.sentence = extract_text_from_sentence(node[1][0])
         self.children = [parse(child) for child in node[2:]]
 
     def __str__(self):
