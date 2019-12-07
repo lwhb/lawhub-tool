@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-"""
-法律ファイル（.xml）及び議案ファイル（.jsonl)を受け取り、改正した法律をTXT形式で出力する
-"""
-
+import argparse
 import json
 import logging
 import sys
@@ -25,7 +22,6 @@ def build_query2node(nodes):
         title = upper_title + node.get_title()
         try:
             query = Query(title)
-            LOGGER.debug(f'found {query}')
         except Exception as e:
             LOGGER.debug(e)
         else:
@@ -39,21 +35,9 @@ def build_query2node(nodes):
     return query2node
 
 
-def main(gian_fp, law_fp, out_fp, stat_fp):
-    LOGGER.info(f'Start to parse {law_fp}')
-    try:
-        tree = ET.parse(law_fp)
-        nodes = [parse(node) for node in tree.getroot()]
-        query2node = build_query2node(nodes)
-    except Exception as e:
-        msg = f'failed to parse {law_fp}: {e}'
-        LOGGER.error(msg)
-        sys.exit(1)
-
+def apply_gian(gian_fp, query2node, stats_factory):
     process_count = 0
     success_count = 0
-    stats_factory = StatsFactory(['jsonl', 'process', 'success'])
-    LOGGER.info(f'Start to apply {gian_fp}')
     with open(gian_fp, 'r') as f:
         for line in f:
             if line[:2] == '!!' or line[:2] == '//':
@@ -71,9 +55,29 @@ def main(gian_fp, law_fp, out_fp, stat_fp):
                 node.sentence = node.sentence.replace(action.old, action.new)
                 LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
                 success_count += 1
-    LOGGER.info(f'Successfully applied {success_count} / {process_count} actions')
-    stats_factory.add({'jsonl': gian_fp, 'process': process_count, 'success': success_count})
-    stats_factory.commit(stat_fp)
+    stats_factory.add({'file': gian_fp, 'process': process_count, 'success': success_count})
+
+
+def main(law_fp, gian_fp, out_fp, stat_fp):
+    LOGGER.info(f'Start to parse {law_fp}')
+    try:
+        tree = ET.parse(law_fp)
+        nodes = [parse(node) for node in tree.getroot()]
+        query2node = build_query2node(nodes)
+    except Exception as e:
+        msg = f'failed to parse {law_fp}: {e}'
+        LOGGER.error(msg)
+        sys.exit(1)
+
+    stats_factory = StatsFactory(['file', 'process', 'success'])
+    if gian_fp:
+        LOGGER.info(f'Start to apply {gian_fp}')
+        apply_gian(gian_fp, query2node, stats_factory)
+        stat = stats_factory.get_last()
+        LOGGER.info('Applied {} / {} actions'.format(stat['success'], stat['process']))
+    if stat_fp:
+        stats_factory.commit(stat_fp)
+        LOGGER.info(f'Updated {stat_fp}')
 
     with open(out_fp, 'w') as f:
         for node in nodes:
@@ -82,6 +86,18 @@ def main(gian_fp, law_fp, out_fp, stat_fp):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
-                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    parser = argparse.ArgumentParser(description='法律ファイル（.xml）及び議案ファイル（.jsonl)を受け取り、改正した法律をTXT形式で出力する')
+    parser.add_argument('-l', '--law', help='法律ファイル(.xml)', required=True)
+    parser.add_argument('-g', '--gian', help='議案ファイル(.jsonl). 指定しない場合は改正せずに出力')
+    parser.add_argument('-o', '--out', help='出力ファイル(.txt)', required=True)
+    parser.add_argument('-s', '--stat')
+    parser.add_argument('-v', '--verbose', action='store_true')
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        datefmt="%m/%d/%Y %I:%M:%S",
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    main(args.law, args.gian, args.out, args.stat)

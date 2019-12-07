@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-"""
-JSONLinesを受け取り、改正対象の法令をXMLとして保存する
-"""
-
+import argparse
 import logging
 import re
 import sys
@@ -54,20 +51,18 @@ def extract_law_num(jsonl_fp):
 
 
 def main(jsonl_fp, xml_fp):
-    LOGGER.info(f'Start getting target of {jsonl_fp}')
-
     if xml_fp.exists():
-        LOGGER.info(f'{xml_fp} already exists')
+        LOGGER.info(f'Skips as law file already exists ({xml_fp})')
         sys.exit(0)
-    LOGGER.info(f'{xml_fp} does not exist yet')
 
+    LOGGER.info(f'Start getting target of {jsonl_fp}')
     try:
         law_num = extract_law_num(jsonl_fp)
     except ValueError as e:
         LOGGER.error(e)
         sys.exit(1)
     if law_num is None:
-        LOGGER.info(f'{jsonl_fp} does not contain Kaisei line')
+        LOGGER.info(f'{jsonl_fp} does not contain KAISEI line')
         sys.exit(0)
     LOGGER.info(f'Extracted target law: {law_num}')
 
@@ -86,6 +81,16 @@ def main(jsonl_fp, xml_fp):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
-                        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    main(Path(sys.argv[1]), Path(sys.argv[2]))
+    parser = argparse.ArgumentParser(description='JSONLinesを受け取り、改正対象の法令をXMLとして保存する')
+    parser.add_argument('-g', '--gian', help='議案ファイル(.jsonl)', required=True)
+    parser.add_argument('-l', '--law', help='法律ファイル(.xml)', required=True)
+    parser.add_argument('-v', '--verbose', action='store_true')
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        datefmt="%m/%d/%Y %I:%M:%S",
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    main(Path(args.gian), Path(args.law))
