@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from lawhub.action import Action, ActionType
 from lawhub.law import parse
 from lawhub.query import Query
+from lawhub.util import StatsFactory
 
 LOGGER = logging.getLogger('apply_gian')
 
@@ -38,19 +39,20 @@ def build_query2node(nodes):
     return query2node
 
 
-def main(gian_fp, law_fp, out_fp):
+def main(gian_fp, law_fp, out_fp, stat_fp):
     LOGGER.info(f'Start to parse {law_fp}')
     try:
         tree = ET.parse(law_fp)
         nodes = [parse(node) for node in tree.getroot()]
         query2node = build_query2node(nodes)
     except Exception as e:
-        msg = f'failed to parse: {e}'
+        msg = f'failed to parse {law_fp}: {e}'
         LOGGER.error(msg)
         sys.exit(1)
 
     process_count = 0
     success_count = 0
+    stats_factory = StatsFactory(['jsonl', 'process', 'success'])
     LOGGER.info(f'Start to apply {gian_fp}')
     with open(gian_fp, 'r') as f:
         for line in f:
@@ -70,6 +72,8 @@ def main(gian_fp, law_fp, out_fp):
                 LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
                 success_count += 1
     LOGGER.info(f'Successfully applied {success_count} / {process_count} actions')
+    stats_factory.add({'jsonl': gian_fp, 'process': process_count, 'success': success_count})
+    stats_factory.commit(stat_fp)
 
     with open(out_fp, 'w') as f:
         for node in nodes:
@@ -80,4 +84,4 @@ def main(gian_fp, law_fp, out_fp):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    main(sys.argv[1], sys.argv[2], sys.argv[3])
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

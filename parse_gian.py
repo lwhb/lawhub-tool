@@ -13,6 +13,7 @@ from pathlib import Path
 from lawhub.action import Action, ActionType
 from lawhub.nlp import split_with_escape, normalize_last_verb
 from lawhub.query import QueryCompensator
+from lawhub.util import StatsFactory
 
 LOGGER = logging.getLogger('parse_gian')
 
@@ -45,7 +46,7 @@ def split_to_chunks(lines):
     return chunks
 
 
-def main(in_fp):
+def main(in_fp, stat_fp):
     try:
         with open(in_fp, 'r') as f:
             data = json.load(f)
@@ -57,11 +58,12 @@ def main(in_fp):
         sys.exit(1)
     LOGGER.info(f'Loaded {len(lines)} lines ({len(chunks)} chunks) from {in_fp}')
 
-    process_count = 0
-    success_count = 0
+    stats_factory = StatsFactory(['jsonl', 'process', 'success'])
     for chunk_id, chunk in enumerate(chunks):
         out_fp = in_fp.parent / f'{chunk_id}.jsonl'
         with open(out_fp, 'w') as f:
+            process_count = 0
+            success_count = 0
             for line in chunk:
                 process_count += 1
                 actions = []
@@ -82,11 +84,13 @@ def main(in_fp):
                     for action in actions:
                         f.write(f'{json.dumps(action.to_dict(), ensure_ascii=False)}\n')
                     success_count += 1
+        LOGGER.info(f'Successfully parsed {success_count} / {process_count} lines')
+        stats_factory.add({'jsonl': out_fp, 'process': process_count, 'success': success_count})
         LOGGER.info(f'Saved {out_fp}')
-    LOGGER.info(f'Successfully parsed {success_count} / {process_count} lines')
+    stats_factory.commit(stat_fp)
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, datefmt="%m/%d/%Y %I:%M:%S",
                         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    main(Path(sys.argv[1]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]))
