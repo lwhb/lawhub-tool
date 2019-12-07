@@ -194,7 +194,7 @@ class Paragraph(BaseLawClass):
         assert node.tag == 'Paragraph'
         assert node[0].tag == 'ParagraphNum'
         assert node[1].tag == 'ParagraphSentence'
-        self.num = int(node[0].text) if node[0].text else None
+        self.num = int(node.attrib['Num']) if 'Num' in node.attrib else None
         self.sentence = extract_text_from_sentence(node[1][0])
         self.children = [parse(child) for child in node[2:]]
 
