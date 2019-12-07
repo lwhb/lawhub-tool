@@ -51,7 +51,7 @@ def extract_text_from_sentence(node):
     text = ET.tostring(node, encoding="unicode")
     text = text.replace('\n', '')
     text = re.sub(r'<Ruby>([^<>]*)<Rt>([^<>]*)</Rt></Ruby>', r'\1', text)  # replace <Ruby>
-    text = re.sub(r'<[^<>]*>', '', text)  # replace all tags
+    text = re.sub(r'<[^<>]*>', '', text)  # replace all tags, such as <Sentence>
     return text
 
 
