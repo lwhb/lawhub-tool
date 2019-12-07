@@ -14,7 +14,7 @@ while read -r gian; do
   bef=${gian%.*}.bef
   aft=${gian%.*}.aft
 
-  ./get_law.py ${gian} ${law}
+  ./get_law.py -g ${gian} -l ${law}
   if test -f "${law}"; then
     ./apply_gian.py -l ${law} -o ${bef}
     ./apply_gian.py -l ${law} -g ${gian} -o ${aft} -s ${stat}
