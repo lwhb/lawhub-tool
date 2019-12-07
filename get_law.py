@@ -82,7 +82,7 @@ def main(jsonl_fp, xml_fp):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='JSONLinesを受け取り、改正対象の法令をXMLとして保存する')
-    parser.add_argument('-g', '--gian', help='議案ファイル(.jsonl)')
+    parser.add_argument('-g', '--gian', help='議案ファイル(.jsonl)', required=True)
     parser.add_argument('-l', '--law', help='法律ファイル(.xml)', required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()

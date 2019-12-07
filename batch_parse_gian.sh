@@ -9,5 +9,5 @@ stat=./data/parse_gian.stat
 
 IFS=$'\t'
 while read -r fp; do
-  ./parse_gian.py ${fp} ${stat}
+  ./parse_gian.py -g ${fp} -s ${stat}
 done <${dataset}
