@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from lawhub.action import Action, ActionType
-from lawhub.nlp import split_with_escape, normalize_last_verb
+from lawhub.nlp import split_with_escape
 from lawhub.query import QueryCompensator
 from lawhub.util import StatsFactory
 
@@ -59,7 +59,7 @@ def parse_actions(line):
     for text in split_with_escape(line.strip()):
         process_count += 1
         try:
-            action = Action(normalize_last_verb(text))
+            action = Action(text)
             if action.action_type in (ActionType.ADD, ActionType.DELETE, ActionType.REPLACE):
                 action.at = qc.compensate(action.at)
             elif action.action_type == ActionType.RENAME:
@@ -67,7 +67,7 @@ def parse_actions(line):
                 action.new = qc.compensate(action.new)
             actions.append(action)
             success_count += 1
-        except ValueError as e:
+        except ValueError:
             pass
 
     return actions, process_count, success_count
@@ -79,7 +79,7 @@ def main(in_fp, stat_fp):
             data = json.load(f)
             lines = data['main'].split('\n')
             chunks = split_to_chunks(lines)
-    except Exception as e:
+    except Exception:
         msg = f'Failed to load GIAN from {in_fp}'
         LOGGER.error(msg)
         sys.exit(1)

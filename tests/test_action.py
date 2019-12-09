@@ -6,14 +6,14 @@ from lawhub.query import Query
 
 class TestAction(TestCase):
     def test_init_add(self):
-        text = '第二条に次の二項を加える'
+        text = '第二条に次の二項を加え'
         action = Action(text)
 
         self.assertEqual(Query('第二条'), action.at)
         self.assertEqual('次の二項', action.what)
 
     def test_init_delete(self):
-        text = '第十四条中「その他」を削る'
+        text = '第十四条中「その他」を削り'
         action = Action(text)
 
         self.assertEqual(Query('第十四条'), action.at)

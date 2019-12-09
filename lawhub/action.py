@@ -2,6 +2,7 @@ import re
 from enum import Enum
 from logging import getLogger
 
+from lawhub.nlp import normalize_last_verb
 from lawhub.query import Query
 
 LOGGER = getLogger(__name__)
@@ -51,13 +52,14 @@ class Action:
 
     def __init_by_str__(self, text):
         self.text = text
-        if self.__init_add__(text):
+        norm_text = normalize_last_verb(self.text)
+        if self.__init_add__(norm_text):
             self.action_type = ActionType.ADD
-        elif self.__init_delete__(text):
+        elif self.__init_delete__(norm_text):
             self.action_type = ActionType.DELETE
-        elif self.__init_replace__(text):
+        elif self.__init_replace__(norm_text):
             self.action_type = ActionType.REPLACE
-        elif self.__init_rename__(text):
+        elif self.__init_rename__(norm_text):
             self.action_type = ActionType.RENAME
         else:
             msg = f'failed to instantiate Action from text="{text}"'
