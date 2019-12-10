@@ -98,7 +98,7 @@ def main(in_fp, stat_fp):
                 else:
                     actions, pc, sc = parse_actions(line)
                     for action in actions:  # output actions even if partial success (ISSUE14)
-                        f.write(f'{json.dumps(action.to_dict(), ensure_ascii=False)}\n')
+                        f.write(json.dumps(action.to_dict(), ensure_ascii=False) + '\n')
                     process_count += pc
                     success_count += sc
         LOGGER.info(f'Successfully parsed {success_count} / {process_count} segments')
