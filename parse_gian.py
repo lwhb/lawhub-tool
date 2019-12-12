@@ -43,9 +43,10 @@ def split_to_chunks(lines):
     return chunks
 
 
-def parse_actions(line):
+def parse_actions(line, meta=None):
     """
     :param line:
+    :param meta: any metadata in key-value form
     :return:
         1. list of actions, even if partial success
         2. success flag if whole line is successfully converted to actions
@@ -59,7 +60,7 @@ def parse_actions(line):
     for text in split_with_escape(line.strip()):
         process_count += 1
         try:
-            action = Action(text)
+            action = Action(text, meta)
             if action.action_type in (ActionType.ADD, ActionType.DELETE, ActionType.REPLACE):
                 action.at = qc.compensate(action.at)
             elif action.action_type == ActionType.RENAME:
@@ -85,22 +86,24 @@ def main(in_fp, stat_fp):
         sys.exit(1)
     LOGGER.info(f'Loaded {len(lines)} lines ({len(chunks)} chunks) from {in_fp}')
 
+    line_count = 0
     stats_factory = StatsFactory(['file', 'process', 'success'])
     for chunk_id, chunk in enumerate(chunks):
         out_fp = in_fp.parent / f'{chunk_id}.jsonl'
+        process_count = 0
+        success_count = 0
         with open(out_fp, 'w') as f:
-            process_count = 0
-            success_count = 0
             for line in chunk:
                 f.write(f'!!{line}\n')
                 if ('　' in line) or (len(line) > 0 and line[0] == '（'):
                     pass  # AdHoc fix to skip likely law sentence
                 else:
-                    actions, pc, sc = parse_actions(line)
+                    actions, pc, sc = parse_actions(line, {'line': line_count})
                     for action in actions:  # output actions even if partial success (ISSUE14)
                         f.write(json.dumps(action.to_dict(), ensure_ascii=False) + '\n')
                     process_count += pc
                     success_count += sc
+                line_count += 1
         LOGGER.info(f'Successfully parsed {success_count} / {process_count} segments')
         stats_factory.add({'file': out_fp, 'process': process_count, 'success': success_count})
         LOGGER.info(f'Saved {out_fp}')
