@@ -2,6 +2,7 @@ import re
 from enum import Enum
 from logging import getLogger
 
+from lawhub.nlp import normalize_last_verb
 from lawhub.query import Query
 
 LOGGER = getLogger(__name__)
@@ -19,19 +20,20 @@ class Action:
     法改正のActionを表現するクラス
     """
 
-    def __init__(self, obj):
+    def __init__(self, obj, meta=None):
         if isinstance(obj, dict):
             self.__init_by_dict__(obj)
         elif isinstance(obj, str):
-            self.__init_by_str__(obj)
+            self.__init_by_str__(obj, meta)
         else:
             msg = f'Failed to instantiate Action from {type(obj)}'
             raise NotImplementedError(msg)
 
     def __init_by_dict__(self, data):
         try:
-            self.action_type = ActionType(data['action_type'])
             self.text = data['text']
+            self.meta = data['meta']
+            self.action_type = ActionType(data['action_type'])
             if self.action_type in (ActionType.ADD, ActionType.DELETE):
                 self.at = Query(data['at'])
                 self.what = data['what']
@@ -49,15 +51,20 @@ class Action:
             msg = f'Failed to instantiate Action from {data}: {e}'
             raise ValueError(msg)
 
-    def __init_by_str__(self, text):
+    def __init_by_str__(self, text, meta=None):
         self.text = text
-        if self.__init_add__(text):
+        self.meta = dict()
+        if meta:
+            self.meta.update(meta)
+
+        norm_text = normalize_last_verb(self.text)
+        if self.__init_add__(norm_text):
             self.action_type = ActionType.ADD
-        elif self.__init_delete__(text):
+        elif self.__init_delete__(norm_text):
             self.action_type = ActionType.DELETE
-        elif self.__init_replace__(text):
+        elif self.__init_replace__(norm_text):
             self.action_type = ActionType.REPLACE
-        elif self.__init_rename__(text):
+        elif self.__init_rename__(norm_text):
             self.action_type = ActionType.RENAME
         else:
             msg = f'failed to instantiate Action from text="{text}"'
@@ -103,7 +110,8 @@ class Action:
     def to_dict(self):
         data = {
             'action_type': self.action_type.value,
-            'text': self.text
+            'text': self.text,
+            'meta': self.meta
         }
         if self.action_type in (ActionType.ADD, ActionType.DELETE):
             data['at'] = self.at.to_dict()

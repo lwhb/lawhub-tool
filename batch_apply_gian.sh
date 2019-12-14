@@ -11,12 +11,13 @@ stat=./data/apply_gian.stat
 IFS=$'\t'
 while read -r gian; do
   law=${gian%.*}.xml
-  bef=${gian%.*}.bef
-  aft=${gian%.*}.aft
+  before=${gian%.*}.before
+  after=${gian%.*}.after
+  applied=${gian%.*}.applied
 
   ./get_law.py -g ${gian} -l ${law}
   if test -f "${law}"; then
-    ./apply_gian.py -l ${law} -o ${bef}
-    ./apply_gian.py -l ${law} -g ${gian} -o ${aft} -s ${stat}
+    ./apply_gian.py -l ${law} -o ${before}
+    ./apply_gian.py -l ${law} -g ${gian} -o ${after} -s ${stat} -a ${applied}
   fi
 done <${dataset}
