@@ -40,5 +40,33 @@ def split_with_escape(sentence):
             buffer += char
     if len(buffer) > 0:
         parts.append(buffer)
-
     return parts
+
+
+def mask_escape(text):
+    escape_pairs = []  # (start, end)
+    escape_count = 0
+    start = None
+    for i, c in enumerate(text):
+        if c == '「':
+            escape_count += 1
+            if escape_count == 1:
+                start = i
+        elif start and c == '」':
+            escape_count -= 1
+            if escape_count == 0:
+                escape_pairs.append((start, i + 1))
+
+    new_text = ''
+    placeholder = 'A'
+    placeholder_map = dict()
+
+    prev_end = 0
+    for start, end in escape_pairs:
+        new_text += text[prev_end:start] + '{' + placeholder + '}'
+        placeholder_map[placeholder] = text[start:end]
+        placeholder = chr(ord(placeholder) + 1)
+        prev_end = end
+    new_text += text[prev_end:]
+
+    return new_text, placeholder_map

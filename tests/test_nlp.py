@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from lawhub.nlp import normalize_last_verb, split_with_escape
+from lawhub.nlp import normalize_last_verb, split_with_escape, mask_escape
 
 
 class TestNlp(TestCase):
@@ -15,3 +15,11 @@ class TestNlp(TestCase):
     def test_split_with_escape(self):
         sentence = 'この関数は「かっこ（「」）で、囲まれていると」切らない、らしい。'
         self.assertEqual(['この関数は「かっこ（「」）で、囲まれていると」切らない', 'らしい'], split_with_escape(sentence))
+
+    def test_mask_escape(self):
+        sentence = 'この関数は「かっこ（「」）」を「マスク」するらしい'
+        masked_sentence, placeholder_map = mask_escape(sentence)
+        self.assertEqual('この関数は{A}を{B}するらしい', masked_sentence)
+        self.assertEqual('「かっこ（「」）」', placeholder_map['A'])
+        self.assertEqual('「マスク」', placeholder_map['B'])
+        self.assertEqual(sentence, masked_sentence.format(**placeholder_map))
