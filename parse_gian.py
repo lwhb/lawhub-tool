@@ -107,7 +107,10 @@ def main(in_fp, stat_fp):
         LOGGER.info(f'Successfully parsed {success_count} / {process_count} segments')
         stats_factory.add({'file': out_fp, 'process': process_count, 'success': success_count})
         LOGGER.info(f'Saved {out_fp}')
-    stats_factory.commit(stat_fp)
+
+    if stat_fp:
+        stats_factory.commit(stat_fp)
+        LOGGER.info(f'Appended stats to {stat_fp}')
 
 
 if __name__ == '__main__':
