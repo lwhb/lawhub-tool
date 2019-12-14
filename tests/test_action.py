@@ -12,6 +12,13 @@ class TestAction(TestCase):
         self.assertEqual(Query('第二条'), action.at)
         self.assertEqual('次の二項', action.what)
 
+    def test_init_add_escape(self):
+        text = '第二条中「前項」の下に「について」を加え'
+        action = Action(text)
+
+        self.assertEqual(Query('第二条中「前項」の下'), action.at)
+        self.assertEqual('「について」', action.what)
+
     def test_init_delete(self):
         text = '第十四条中「その他」を削り'
         action = Action(text)

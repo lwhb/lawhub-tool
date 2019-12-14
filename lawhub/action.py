@@ -2,7 +2,7 @@ import re
 from enum import Enum
 from logging import getLogger
 
-from lawhub.nlp import normalize_last_verb
+from lawhub.nlp import normalize_last_verb, mask_escape
 from lawhub.query import Query
 
 LOGGER = getLogger(__name__)
@@ -72,10 +72,11 @@ class Action:
 
     def __init_add__(self, text):
         pattern = r'(.*)に(.*)を加える'
-        match = re.match(pattern, text)
+        masked_text, placeholder_map = mask_escape(text)
+        match = re.match(pattern, masked_text)
         if match:
-            self.at = Query(match.group(1))
-            self.what = match.group(2)
+            self.at = Query(match.group(1).format(**placeholder_map))
+            self.what = match.group(2).format(**placeholder_map)
             return True
         return False
 
