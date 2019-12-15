@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 from lawhub.action import Action, ActionType
 from lawhub.law import parse
-from lawhub.query import Query
+from lawhub.query import Query, QueryType
 from lawhub.util import StatsFactory
 
 LOGGER = logging.getLogger('apply_gian')
@@ -35,6 +35,44 @@ def build_query2node(nodes):
     return query2node
 
 
+def apply_replace(action, query2node):
+    if action.at not in query2node:
+        LOGGER.warning(f'failed to locate {action.at}')
+        return False
+    node = query2node[action.at]
+    if not (hasattr(node, 'sentence')) or action.old not in node.sentence:
+        LOGGER.warning(f'\"{action.old}\" does not exist in {action.at}')
+        return False
+    node.sentence = node.sentence.replace(action.old, action.new)
+    LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
+    return True
+
+
+def apply_add(action, query2node):
+    if action.at.query_type != QueryType.AFTER_WORD:
+        return False  # ToDo: implement other QueryType
+    if action.at not in query2node:
+        LOGGER.warning(f'failed to locate {action.at}')
+        return False
+    node = query2node[action.at]
+    if not (hasattr(node, 'sentence')) or action.at.word not in node.sentence:
+        LOGGER.warning(f'\"{action.at.word}\" does not exist in {action.at}')
+        return False
+    idx = node.sentence.find(action.at.word)
+    node.sentence = node.sentence[:idx] + action.what + node.sentence[idx:]
+    LOGGER.debug(f'added \"{action.what}\" at {action.at}')
+    return True
+
+
+def is_target_action(action):
+    if action.action_type == ActionType.REPLACE:
+        return True
+    if action.action_type == ActionType.ADD:
+        if action.at.query_type == QueryType.AFTER_WORD:
+            return True
+    return False
+
+
 def apply_gian(gian_fp, query2node, stats_factory):
     applied_actions = []
     process_count = 0
@@ -44,19 +82,15 @@ def apply_gian(gian_fp, query2node, stats_factory):
             if line[:2] == '!!' or line[:2] == '//':
                 continue
             action = Action(json.loads(line))
-            if action.action_type == ActionType.REPLACE:
+            if is_target_action(action):
                 process_count += 1
-                if action.at not in query2node:
-                    LOGGER.warning(f'failed to locate \"{action.at}\"')
-                    continue
-                node = query2node[action.at]
-                if not (hasattr(node, 'sentence')) or action.old not in node.sentence:
-                    LOGGER.warning(f'\"{action.old}\" does not exist in \"{action.at}\"')
-                    continue
-                node.sentence = node.sentence.replace(action.old, action.new)
-                LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
-                applied_actions.append(action)
-                success_count += 1
+                if action.action_type == ActionType.REPLACE:
+                    success = apply_replace(action, query2node)
+                elif action.action_type == ActionType.ADD:
+                    success = apply_add(action, query2node)
+                success_count += int(success)
+            else:
+                pass  # ToDo: implement other ActionType
     stats_factory.add({'file': gian_fp, 'process': process_count, 'success': success_count})
     return applied_actions
 

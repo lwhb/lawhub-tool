@@ -85,13 +85,8 @@ class Query:
     def __eq__(self, other):
         if not (isinstance(other, Query)):
             return False
-        if self.query_type != other.query_type:
-            return False
         for hrchy in Query.law_hierarchy_lst:
             if self.get(hrchy) != other.get(hrchy):
-                return False
-        if self.query_type == QueryType.AFTER_WORD:
-            if self.word != other.word:
                 return False
         return True
 
