@@ -88,7 +88,9 @@ def apply_gian(gian_fp, query2node, stats_factory):
                     success = apply_replace(action, query2node)
                 elif action.action_type == ActionType.ADD:
                     success = apply_add(action, query2node)
-                success_count += int(success)
+                if success:
+                    success_count += 1
+                    applied_actions.append(action)
             else:
                 pass  # ToDo: implement other ActionType
     stats_factory.add({'file': gian_fp, 'process': process_count, 'success': success_count})
