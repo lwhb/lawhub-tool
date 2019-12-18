@@ -63,191 +63,213 @@ def parse(node):
     :return: node in BaseLawClass tree
     """
     if node.tag == 'Part':
-        return Part(node)
+        return Part().from_xml(node)
     elif node.tag == 'Chapter':
-        return Chapter(node)
+        return Chapter().from_xml(node)
     elif node.tag == 'Section':
-        return Section(node)
+        return Section().from_xml(node)
     elif node.tag == 'Subsection':
-        return Subsection(node)
+        return Subsection().from_xml(node)
     elif node.tag == 'Division':
-        return Division(node)
+        return Division().from_xml(node)
     elif node.tag == 'Article':
-        return Article(node)
+        return Article().from_xml(node)
     elif node.tag == 'Paragraph':
-        return Paragraph(node)
+        return Paragraph().from_xml(node)
     elif node.tag == 'Item':
-        return Item(node)
+        return Item().from_xml(node)
     elif node.tag == 'Subitem1':
-        return Subitem1(node)
+        return Subitem1().from_xml(node)
     elif node.tag == 'Subitem2':
-        return Subitem2(node)
+        return Subitem2().from_xml(node)
     elif node.tag == 'TableStruct':
-        return PlaceHolder('<表略>')
+        return BaseLawClass(title='<表略>')
     elif node.tag == 'List':
-        return PlaceHolder('<一覧略>')
+        return BaseLawClass(title='<一覧略>')
     else:
         msg = f'Unknown Element {node.tag}: {node}'
         raise NotImplementedError(msg)
 
 
 class BaseLawClass:
-    def __init__(self):
-        self.children = []
+    def __init__(self, title=None, children=None):
+        self.title = title if title else ''
+        self.children = children if children else list()
 
     def __str__(self):
-        return ''
+        body = self.title
+        if self.children:
+            return body + '\n' + self.__str_children__()
+        else:
+            return body
+
+    def __str_children__(self):
+        return '\n'.join(map(lambda x: x.__str__(), self.children))
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} {self.get_title()}>'
-
-    def get_title(self):
-        return ''
+        return f'<{self.__class__.__name__} {self.title}>'
 
 
 class BaseSectionClass(BaseLawClass):
-    def __init__(self, node):
+    def __init__(self, title=None, children=None):
+        super().__init__(title, children)
+
+    def from_xml(self, node):
         self.title = node[0].text
         self.children = [parse(child) for child in node[1:]]
+        return self
 
     def __str__(self):
-        return '\n'.join([self.title] + list(map(lambda x: x.__str__(), self.children)) + [''])
-
-    def get_title(self):
-        return self.title
+        return super().__str__() + '\n'
 
 
 class BaseItemClass(BaseLawClass):
-    def __init__(self, node):
-        self.title = node[0].text
+    def __init__(self, title=None, sentence=None, children=None):
+        super().__init__(title, children)
+        self.sentence = sentence if sentence else ''
+
+    def from_xml(self, node):
         self.sentence = INDENT.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
         self.children = [parse(child) for child in node[2:]]
+        return self
 
     def __str__(self):
-        return '\n'.join([f'{self.title}　{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
-
-    def get_title(self):
-        return self.title
+        body = self.title + ' ' + self.sentence
+        if self.children:
+            return body + '\n' + self.__str_children__()
+        else:
+            return body
 
 
 class Part(BaseSectionClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Part'
         assert node[0].tag == 'PartTitle'
-        super().__init__(node)
+        return super().from_xml(node)
 
 
 class Chapter(BaseSectionClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Chapter'
         assert node[0].tag == 'ChapterTitle'
-        super().__init__(node)
+        return super().from_xml(node)
 
 
 class Section(BaseSectionClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Section'
         assert node[0].tag == 'SectionTitle'
-        super().__init__(node)
+        return super().from_xml(node)
 
 
 class Subsection(BaseSectionClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Subsection'
         assert node[0].tag == 'SubsectionTitle'
-        super().__init__(node)
+        return super().from_xml(node)
 
 
 class Division(BaseSectionClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Division'
         assert node[0].tag == 'DivisionTitle'
-        super().__init__(node)
+        return super().from_xml(node)
 
 
 class Article(BaseLawClass):
-    def __init__(self, node):
+    def __init__(self, title=None, caption=None, number=None, children=None):
+        super().__init__(title, children)
+        self.caption = caption if caption else ''
+        self.number = number if number else ''
+
+    def from_xml(self, node):
         assert node.tag == 'Article'
+        if 'Num' in node.attrib:
+            self.number = node.attrib['Num']
         if node[0].tag == 'ArticleCaption' and node[1].tag == 'ArticleTitle':
             self.caption = node[0].text
             self.title = node[1].text
             self.children = [parse(child) for child in node[2:]]
         elif node[0].tag == 'ArticleTitle':
-            self.caption = None
             self.title = node[0].text
             self.children = [parse(child) for child in node[1:]]
         else:
             assert False
+        return self
 
     def __str__(self):
         if self.caption:
-            return '\n'.join([self.caption, self.title] + list(map(lambda x: x.__str__(), self.children)) + [''])
+            body = self.caption + '\n' + self.title
         else:
-            return '\n'.join([self.title] + list(map(lambda x: x.__str__(), self.children)) + [''])
-
-    def get_title(self):
-        return self.title
+            body = self.title
+        if self.children:
+            return body + '\n' + self.__str_children__() + '\n'
+        else:
+            return body + '\n'
 
 
 class Paragraph(BaseLawClass):
-    def __init__(self, node):
+    def __init__(self, title=None, number=None, sentence=None, children=None):
+        super().__init__(title, children)
+        self.number = number if number else ''
+        self.sentence = sentence if sentence else ''
+
+    def from_xml(self, node):
         assert node.tag == 'Paragraph'
         assert node[0].tag == 'ParagraphNum'
         assert node[1].tag == 'ParagraphSentence'
-        self.num = int(node.attrib['Num']) if 'Num' in node.attrib else None
+        if 'Num' in node.attrib:
+            self.number = node.attrib['Num']
+            self.title = '第{}項'.format(int2kanji(int(self.number)))
+        else:
+            self.title = '第一項'
         self.sentence = extract_text_from_sentence(node[1][0])
         self.children = [parse(child) for child in node[2:]]
+        return self
 
     def __str__(self):
-        if self.num:
-            return '\n'.join([f'{self.num}　{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
+        if self.number:
+            body = self.number + ' ' + self.sentence
         else:
-            return '\n'.join([f'{self.sentence}'] + list(map(lambda x: x.__str__(), self.children)))
+            body = self.sentence
 
-    def get_title(self):
-        return '第{}項'.format(int2kanji(self.num) if self.num else '一')
+        if self.children:
+            return body + '\n' + self.__str_children__()
+        else:
+            return body
 
 
 class Item(BaseItemClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Item'
         assert node[0].tag == 'ItemTitle'
         assert node[1].tag == 'ItemSentence'
-        super().__init__(node)
+        self.title = '第{}号'.format(node[0].text)
+        return super().from_xml(node)
 
     def __str__(self):
         return INDENT + super().__str__()
 
-    def get_title(self):
-        return '第{}号'.format(self.title if self.title else '一')
-
 
 class Subitem1(BaseItemClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Subitem1'
         assert node[0].tag == 'Subitem1Title'
         assert node[1].tag == 'Subitem1Sentence'
-        super().__init__(node)
+        self.title = node[0].text
+        return super().from_xml(node)
 
     def __str__(self):
         return INDENT * 2 + super().__str__()
 
 
 class Subitem2(BaseItemClass):
-    def __init__(self, node):
+    def from_xml(self, node):
         assert node.tag == 'Subitem2'
         assert node[0].tag == 'Subitem2Title'
         assert node[1].tag == 'Subitem2Sentence'
-        super().__init__(node)
+        self.title = node[0].text
+        return super().from_xml(node)
 
     def __str__(self):
         return INDENT * 3 + super().__str__()
-
-
-class PlaceHolder(BaseLawClass):
-    def __init__(self, string):
-        self.string = string
-        super().__init__()
-
-    def __str__(self):
-        return self.string
