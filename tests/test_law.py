@@ -39,3 +39,11 @@ class TestLaw(TestCase):
         self.assertTrue(Article(number='2_1') < Article(number='2_2'))
         self.assertTrue(Article(number='2_1') < Article(number='2_10'))
         self.assertTrue(Article(number='2') < Article(number='2_1'))
+
+    def test_item(self):
+        fp = './resource/item.xml'
+        item = parse(ET.parse(fp).getroot())
+        self.assertEqual('第一号', item.title)
+        self.assertEqual('ほどほどに頑張ること。', item.sentence)
+        self.assertEqual(0, len(item.children))
+        self.assertEqual('    一 ほどほどに頑張ること。', str(item))

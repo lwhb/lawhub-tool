@@ -19,13 +19,13 @@ def build_query2node(nodes):
     stack = [(node, '') for node in nodes]
     while len(stack) > 0:
         node, upper_title = stack.pop()
-        title = upper_title + node.get_title()
+        title = upper_title + node.title
         try:
             query = Query(title)
         except Exception as e:
             LOGGER.debug(e)
         else:
-            if not (query.is_empty()) and node.get_title() != '':
+            if not (query.is_empty()) and node.title != '':
                 if query in query2node:
                     LOGGER.debug(f'duplicated query({query}) for {type(node)}')
                 else:

@@ -7,7 +7,8 @@ from lawhub.constants import NUMBER_KANJI, IROHA, NUMBER_ROMAN
 from lawhub.kanzize import int2kanji
 
 LOGGER = getLogger(__name__)
-INDENT = ' ' * 4
+SPACE = ' '
+INDENT = SPACE * 4
 
 
 class LawHierarchy(str, Enum):
@@ -52,7 +53,7 @@ def extract_text_from_sentence(node):
     text = text.replace('\n', '')
     text = re.sub(r'<Ruby>([^<>]*)<Rt>([^<>]*)</Rt></Ruby>', r'\1', text)  # replace <Ruby>
     text = re.sub(r'<[^<>]*>', '', text)  # replace all tags, such as <Sentence>
-    return text
+    return text.strip()
 
 
 def parse(node):
@@ -133,7 +134,7 @@ class BaseItemClass(BaseLawClass):
         return self
 
     def __str__(self):
-        body = self.title + ' ' + self.sentence
+        body = self.title + SPACE + self.sentence
         if self.children:
             body += '\n' + self.__str_children__()
         return body
@@ -235,7 +236,7 @@ class Paragraph(BaseLawClass):
         return self
 
     def __str__(self):
-        body = str(self.number) + ' ' + self.sentence
+        body = str(self.number) + SPACE + self.sentence
         if self.children:
             body += '\n' + self.__str_children__()
         return body
@@ -260,7 +261,10 @@ class Item(BaseItemClass):
         return super().from_xml(node)
 
     def __str__(self):
-        return INDENT + super().__str__()
+        body = self.title[1:-1] + SPACE + self.sentence if self.title else self.sentence
+        if self.children:
+            body += '\n' + self.__str_children__()
+        return INDENT + body
 
 
 class Subitem1(BaseItemClass):
