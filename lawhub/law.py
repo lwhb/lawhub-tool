@@ -99,9 +99,8 @@ class BaseLawClass:
     def __str__(self):
         body = self.title
         if self.children:
-            return body + '\n' + self.__str_children__()
-        else:
-            return body
+            body += '\n' + self.__str_children__()
+        return body
 
     def __str_children__(self):
         return '\n'.join(map(lambda x: x.__str__(), self.children))
@@ -136,9 +135,8 @@ class BaseItemClass(BaseLawClass):
     def __str__(self):
         body = self.title + ' ' + self.sentence
         if self.children:
-            return body + '\n' + self.__str_children__()
-        else:
-            return body
+            body += '\n' + self.__str_children__()
+        return body
 
 
 class Part(BaseSectionClass):
@@ -180,12 +178,12 @@ class Article(BaseLawClass):
     def __init__(self, title=None, caption=None, number=None, children=None):
         super().__init__(title, children)
         self.caption = caption if caption else ''
-        self.number = number if number else ''
+        self.number = number if number else '1'
 
     def from_xml(self, node):
         assert node.tag == 'Article'
-        if 'Num' in node.attrib:
-            self.number = node.attrib['Num']
+        assert 'Num' in node.attrib
+        self.number = node.attrib['Num']
         if node[0].tag == 'ArticleCaption' and node[1].tag == 'ArticleTitle':
             self.caption = node[0].text
             self.title = node[1].text
@@ -198,45 +196,59 @@ class Article(BaseLawClass):
         return self
 
     def __str__(self):
-        if self.caption:
-            body = self.caption + '\n' + self.title
-        else:
-            body = self.title
+        body = self.caption + '\n' + self.title if self.caption else self.title
         if self.children:
-            return body + '\n' + self.__str_children__() + '\n'
-        else:
-            return body + '\n'
+            body += '\n' + self.__str_children__()
+        return body + '\n'
+
+    def __eq__(self, other):
+        if not isinstance(other, Article):
+            raise NotImplementedError()
+        return self.number == other.number
+
+    def __lt__(self, other):
+        if not isinstance(other, Article):
+            raise NotImplementedError()
+        for i, j in zip(map(lambda x: int(x), self.number.split('_')), map(lambda x: int(x), other.number.split('_'))):
+            if i < j:
+                return True
+            elif i > j:
+                return False
+        return len(self.number) < len(other.number)
 
 
 class Paragraph(BaseLawClass):
     def __init__(self, title=None, number=None, sentence=None, children=None):
         super().__init__(title, children)
-        self.number = number if number else ''
+        self.number = number if number else 1
         self.sentence = sentence if sentence else ''
 
     def from_xml(self, node):
         assert node.tag == 'Paragraph'
         assert node[0].tag == 'ParagraphNum'
         assert node[1].tag == 'ParagraphSentence'
-        if 'Num' in node.attrib:
-            self.number = node.attrib['Num']
-            self.title = '第{}項'.format(int2kanji(int(self.number)))
-        else:
-            self.title = '第一項'
+        assert 'Num' in node.attrib
+        self.number = int(node.attrib['Num'])
+        self.title = '第{}項'.format(int2kanji(int(self.number)))
         self.sentence = extract_text_from_sentence(node[1][0])
         self.children = [parse(child) for child in node[2:]]
         return self
 
     def __str__(self):
-        if self.number:
-            body = self.number + ' ' + self.sentence
-        else:
-            body = self.sentence
-
+        body = str(self.number) + ' ' + self.sentence
         if self.children:
-            return body + '\n' + self.__str_children__()
-        else:
-            return body
+            body += '\n' + self.__str_children__()
+        return body
+
+    def __eq__(self, other):
+        if not isinstance(other, Article):
+            raise NotImplementedError()
+        return self.number == other.number
+
+    def __lt__(self, other):
+        if not isinstance(other, Article):
+            raise NotImplementedError()
+        return self.number < other.number
 
 
 class Item(BaseItemClass):
