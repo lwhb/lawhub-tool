@@ -17,7 +17,7 @@ class TestAction(TestCase):
         action = Action(text)
 
         self.assertEqual(Query('第二条中「前項」の下'), action.at)
-        self.assertEqual('「について」', action.what)
+        self.assertEqual('について', action.what)
 
     def test_init_delete(self):
         text = '第十四条中「その他」を削り'

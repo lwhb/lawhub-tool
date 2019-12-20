@@ -7,6 +7,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 from lawhub.action import Action, ActionType
+from lawhub.apply import apply_replace, apply_add_after
 from lawhub.law import parse_xml, sort_law_tree
 from lawhub.query import Query, QueryType
 from lawhub.util import StatsFactory
@@ -35,35 +36,6 @@ def build_query2node(nodes):
     return query2node
 
 
-def apply_replace(action, query2node):
-    if action.at not in query2node:
-        LOGGER.warning(f'failed to locate {action.at}')
-        return False
-    node = query2node[action.at]
-    if not (hasattr(node, 'sentence')) or action.old not in node.sentence:
-        LOGGER.warning(f'\"{action.old}\" does not exist in {action.at}')
-        return False
-    node.sentence = node.sentence.replace(action.old, action.new)
-    LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
-    return True
-
-
-def apply_add(action, query2node):
-    if action.at.query_type != QueryType.AFTER_WORD:
-        return False  # ToDo: implement other QueryType
-    if action.at not in query2node:
-        LOGGER.warning(f'failed to locate {action.at}')
-        return False
-    node = query2node[action.at]
-    if not (hasattr(node, 'sentence')) or action.at.word not in node.sentence:
-        LOGGER.warning(f'\"{action.at.word}\" does not exist in {action.at}')
-        return False
-    idx = node.sentence.find(action.at.word)
-    node.sentence = node.sentence[:idx] + action.what + node.sentence[idx:]
-    LOGGER.debug(f'added \"{action.what}\" at {action.at}')
-    return True
-
-
 def is_target_action(action):
     if action.action_type == ActionType.REPLACE:
         return True
@@ -84,15 +56,17 @@ def apply_gian(gian_fp, query2node, stats_factory):
             action = Action(json.loads(line))
             if is_target_action(action):
                 process_count += 1
-                if action.action_type == ActionType.REPLACE:
-                    success = apply_replace(action, query2node)
-                elif action.action_type == ActionType.ADD:
-                    success = apply_add(action, query2node)
-                if success:
+                try:
+                    if action.action_type == ActionType.REPLACE:
+                        apply_replace(action, query2node)
+                    elif action.action_type == ActionType.ADD:
+                        if action.at.query_type == QueryType.AFTER_WORD:
+                            apply_add_after(action, query2node)
+                except Exception as e:
+                    LOGGER.debug(e)
+                else:
                     success_count += 1
                     applied_actions.append(action)
-            else:
-                pass  # ToDo: implement other ActionType
     stats_factory.add({'file': gian_fp, 'process': process_count, 'success': success_count})
     return applied_actions
 
