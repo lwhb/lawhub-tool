@@ -7,7 +7,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 from lawhub.action import Action, ActionType
-from lawhub.law import parse
+from lawhub.law import parse_xml, sort_law_tree
 from lawhub.query import Query, QueryType
 from lawhub.util import StatsFactory
 
@@ -101,7 +101,7 @@ def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp):
     LOGGER.info(f'Start to parse {law_fp}')
     try:
         tree = ET.parse(law_fp)
-        nodes = [parse(node) for node in tree.getroot()]
+        nodes = [parse_xml(node) for node in tree.getroot()]
         query2node = build_query2node(nodes)
     except Exception as e:
         msg = f'failed to parse {law_fp}: {e}'
@@ -124,6 +124,9 @@ def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp):
                 for action in applied_actions:
                     f.write(json.dumps(action.to_dict(), ensure_ascii=False) + '\n')
             LOGGER.info(f'Saved applied actions to {applied_fp}')
+
+    for node in nodes:
+        sort_law_tree(node)
 
     with open(out_fp, 'w') as f:
         for node in nodes:
