@@ -7,8 +7,8 @@ import sys
 import xml.etree.ElementTree as ET
 
 from lawhub.action import Action, ActionType
-from lawhub.apply import apply_replace, apply_add_after
-from lawhub.law import parse_xml, sort_law_tree
+from lawhub.apply import apply_replace, apply_add_after, apply_delete
+from lawhub.law import parse_xml
 from lawhub.query import Query, QueryType
 from lawhub.util import StatsFactory
 
@@ -42,36 +42,37 @@ def is_target_action(action):
     if action.action_type == ActionType.ADD:
         if action.at.query_type == QueryType.AFTER_WORD:
             return True
+    if action.action_type == ActionType.DELETE:
+        return True
     return False
 
 
-def apply_gian(gian_fp, query2node, stats_factory):
+def apply_gian(gian_fp, query2node):
     applied_actions = []
-    process_count = 0
-    success_count = 0
+    failed_actions = []
     with open(gian_fp, 'r') as f:
         for line in f:
             if line[:2] == '!!' or line[:2] == '//':
                 continue
             action = Action(json.loads(line))
             if is_target_action(action):
-                process_count += 1
                 try:
                     if action.action_type == ActionType.REPLACE:
                         apply_replace(action, query2node)
                     elif action.action_type == ActionType.ADD:
                         if action.at.query_type == QueryType.AFTER_WORD:
                             apply_add_after(action, query2node)
+                    elif action.action_type == ActionType.DELETE:
+                        apply_delete(action, query2node)
                 except Exception as e:
                     LOGGER.debug(e)
+                    failed_actions.append(action)
                 else:
-                    success_count += 1
                     applied_actions.append(action)
-    stats_factory.add({'file': gian_fp, 'process': process_count, 'success': success_count})
-    return applied_actions
+    return applied_actions, failed_actions
 
 
-def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp):
+def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp, failed_fp):
     LOGGER.info(f'Start to parse {law_fp}')
     try:
         tree = ET.parse(law_fp)
@@ -85,9 +86,11 @@ def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp):
     if gian_fp:
         LOGGER.info(f'Start to apply {gian_fp}')
         stats_factory = StatsFactory(['file', 'process', 'success'])
-        applied_actions = apply_gian(gian_fp, query2node, stats_factory)
-        stat = stats_factory.get_last()
-        LOGGER.info('Applied {} / {} actions'.format(stat['success'], stat['process']))
+        applied_actions, failed_actions = apply_gian(gian_fp, query2node)
+        process_count = len(applied_actions) + len(failed_actions)
+        success_count = len(applied_actions)
+        stats_factory.add({'file': gian_fp, 'process': process_count, 'success': success_count})
+        LOGGER.info('Applied {} / {} actions'.format(success_count, process_count))
 
         if stat_fp:
             stats_factory.commit(stat_fp)
@@ -99,8 +102,15 @@ def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp):
                     f.write(json.dumps(action.to_dict(), ensure_ascii=False) + '\n')
             LOGGER.info(f'Saved applied actions to {applied_fp}')
 
-    for node in nodes:
-        sort_law_tree(node)
+        if failed_fp:
+            with open(failed_fp, 'w') as f:
+                for action in failed_actions:
+                    f.write(json.dumps(action.to_dict(), ensure_ascii=False) + '\n')
+            LOGGER.info(f'Saved failed actions to {failed_fp}')
+
+    # wait until ISSUE13
+    # for node in nodes:
+    #     sort_law_tree(node)
 
     with open(out_fp, 'w') as f:
         for node in nodes:
@@ -115,6 +125,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--out', help='出力ファイル(.txt)', required=True)
     parser.add_argument('-s', '--stat', help='処理結果を保存する')
     parser.add_argument('-a', '--applied', help='適用されたActionを保存する')
+    parser.add_argument('-f', '--failed', help='適用できなかったActionを保存する')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -124,4 +135,4 @@ if __name__ == '__main__':
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    main(args.law, args.gian, args.out, args.stat, args.applied)
+    main(args.law, args.gian, args.out, args.stat, args.applied, args.failed)

@@ -34,9 +34,12 @@ class Action:
             self.text = data['text']
             self.meta = data['meta']
             self.action_type = ActionType(data['action_type'])
-            if self.action_type in (ActionType.ADD, ActionType.DELETE):
+            if self.action_type == ActionType.ADD:
                 self.at = Query(data['at'])
                 self.what = data['what']
+            elif self.action_type == ActionType.DELETE:
+                self.at = Query(data['at'])
+                self.whats = data['whats']
             elif self.action_type == ActionType.REPLACE:
                 self.at = Query(data['at'])
                 self.old = data['old']
@@ -90,7 +93,7 @@ class Action:
         match = re.match(pattern, text)
         if match:
             self.at = Query(match.group(1))
-            self.what = match.group(2)
+            self.whats = match.group(2).split('」及び「')
             return True
         return False
 
@@ -119,9 +122,12 @@ class Action:
             'text': self.text,
             'meta': self.meta
         }
-        if self.action_type in (ActionType.ADD, ActionType.DELETE):
+        if self.action_type == ActionType.ADD:
             data['at'] = self.at.to_dict()
             data['what'] = self.what
+        elif self.action_type == ActionType.DELETE:
+            data['at'] = self.at.to_dict()
+            data['whats'] = self.whats
         elif self.action_type == ActionType.REPLACE:
             data['at'] = self.at.to_dict()
             data['old'] = self.old
@@ -138,7 +144,7 @@ class Action:
         if self.action_type == ActionType.ADD:
             return f'<ADD at={self.at.text} what={self.what}>'
         elif self.action_type == ActionType.DELETE:
-            return f'<DELETE at={self.at.text} what={self.what}>'
+            return f'<DELETE at={self.at.text} whats={self.whats}>'
         elif self.action_type == ActionType.REPLACE:
             return f'<REPLACE at={self.at.text} old={self.old} new={self.new}>'
         elif self.action_type == ActionType.RENAME:
@@ -155,7 +161,7 @@ class Action:
         if self.action_type == ActionType.ADD:
             return self.at == other.at and self.what == other.what
         elif self.action_type == ActionType.DELETE:
-            return self.at == other.at and self.what == other.what
+            return self.at == other.at and self.whats == other.whats
         elif self.action_type == ActionType.REPLACE:
             return self.at == other.at and self.old == other.old and self.new == other.old
         elif self.action_type == ActionType.RENAME:
