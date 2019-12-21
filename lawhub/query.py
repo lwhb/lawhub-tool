@@ -10,7 +10,6 @@ LOGGER = getLogger(__name__)
 
 class QueryType(str, Enum):
     AT_HIERARCHY = 'at_hierarchy'
-    AFTER_WORD = 'after_word'
     AFTER_HIERARCHY = 'after_hierarchy'
 
 
@@ -35,8 +34,6 @@ class Query:
             self.query_type = QueryType(data['query_type'])
             self.text = data['text']
             self.hierarchy = data['hierarchy']
-            if self.query_type == QueryType.AFTER_WORD:
-                self.word = data['word']
         except Exception as e:
             msg = f'Failed to instantiate Query from {data}: {e}'
             raise ValueError(msg)
@@ -44,9 +41,7 @@ class Query:
     def __init_by_str__(self, text):
         self.text = text  # ToDo: 複数箇所を指定している場合に対応する
 
-        if self.__init_after_word__(text):
-            self.query_type = QueryType.AFTER_WORD
-        elif self.__init_after_hierarchy__(text):
+        if self.__init_after_hierarchy__(text):
             self.query_type = QueryType.AFTER_HIERARCHY
         elif self.__init_at_hierarchy__(text):  # always success
             self.query_type = QueryType.AT_HIERARCHY
@@ -62,15 +57,6 @@ class Query:
     def __init_at_hierarchy__(self, text):
         self.__init_hierarchy__(text)
         return True
-
-    def __init_after_word__(self, text):
-        pattern = r'(.*)中「(.*)」の下'
-        match = re.match(pattern, text)
-        if match:
-            self.__init_hierarchy__(match.group(1))
-            self.word = match.group(2)
-            return True
-        return False
 
     def __init_after_hierarchy__(self, text):
         pattern = r'(.*)の次'
@@ -118,14 +104,9 @@ class Query:
         return True
 
     def to_dict(self):
-        data = {
-            'query_type': self.query_type,
-            'text': self.text,
-            'hierarchy': self.hierarchy
-        }
-        if self.query_type == QueryType.AFTER_WORD:
-            data['word'] = self.word
-        return data
+        return {'query_type': self.query_type,
+                'text': self.text,
+                'hierarchy': self.hierarchy}
 
 
 class QueryCompensator:

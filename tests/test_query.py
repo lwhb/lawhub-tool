@@ -14,16 +14,6 @@ class TestQuery(TestCase):
         self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
         self.assertEqual('第三号', query.get(LawHierarchy.ITEM))
 
-    def test_init_after_word(self):
-        text = '第一条第二項第三号中「文字列」の下'
-        query = Query(text)
-
-        self.assertEqual(QueryType.AFTER_WORD, query.query_type)
-        self.assertEqual('第一条', query.get(LawHierarchy.ARTICLE))
-        self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
-        self.assertEqual('第三号', query.get(LawHierarchy.ITEM))
-        self.assertEqual('文字列', query.word)
-
     def test_init_after_hierarchy(self):
         text = '第一条第二項第三号の次'
         query = Query(text)
