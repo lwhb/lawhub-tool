@@ -98,10 +98,13 @@ class Action:
         return False
 
     def __init_replace__(self, text):
-        pattern = r'(.*)中「(.*)」を「(.*)」に改める'
+        pattern = r'(?:(.*)中)?「(.*)」を「(.*)」に(改める)?'
         match = re.match(pattern, text)
         if match:
-            self.at = Query(match.group(1))
+            if match.group(1):
+                self.at = Query(match.group(1))
+            else:
+                self.at = Query('')
             self.old = match.group(2)
             self.new = match.group(3)
             return True

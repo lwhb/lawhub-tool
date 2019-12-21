@@ -1,3 +1,4 @@
+import copy
 import re
 from enum import Enum
 from logging import getLogger
@@ -41,16 +42,13 @@ class Query:
             raise ValueError(msg)
 
     def __init_by_str__(self, text):
-        self.text = text
-        # if '及び' in self.text:
-        #     msg = f'Multiple type query is not supported yet: {self.text}'
-        #     raise NotImplementedError(msg)  # ToDo: 複数箇所を指定している場合に対応する
+        self.text = text  # ToDo: 複数箇所を指定している場合に対応する
 
         if self.__init_after_word__(text):
             self.query_type = QueryType.AFTER_WORD
         elif self.__init_after_hierarchy__(text):
             self.query_type = QueryType.AFTER_HIERARCHY
-        elif self.__init_at_hierarchy__(text):
+        elif self.__init_at_hierarchy__(text):  # always success
             self.query_type = QueryType.AT_HIERARCHY
         else:
             msg = f'Failed to instantiate Query with text="{text}"'
@@ -136,22 +134,25 @@ class QueryCompensator:
     """
 
     def __init__(self):
-        self.context = dict()
+        self.context = Query('')
 
     def compensate(self, query):
+        if query.text == '':
+            return copy.deepcopy(self.context)
+
         do_compensate = False
         for hrchy in (LawHierarchy.ITEM, LawHierarchy.PARAGRAPH, LawHierarchy.ARTICLE):  # bottom-up order for do_compensate
             if query.has(hrchy):
-                self.context[hrchy] = query.get(hrchy)
                 do_compensate = True
             elif query.has(hrchy, include_placeholder=True):
-                if not (hrchy in self.context):
+                if not self.context.has(hrchy):
                     msg = f'failed to compensate {hrchy.name} for {query.text} from {self.context}'
                     raise ValueError(msg)
-                query.set(hrchy, self.context[hrchy])
+                query.set(hrchy, self.context.get(hrchy))
                 do_compensate = True
-            elif do_compensate and hrchy in self.context:
-                query.set(hrchy, self.context[hrchy])
+            elif do_compensate and self.context.has(hrchy):
+                query.set(hrchy, self.context.get(hrchy))
         if do_compensate and not (query.has(LawHierarchy.PARAGRAPH)):
             query.set(LawHierarchy.PARAGRAPH, '第一項')
+        self.context = copy.deepcopy(query)
         return query
