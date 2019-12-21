@@ -104,10 +104,13 @@ class Action:
         return False
 
     def __init_delete__(self, text):
-        pattern = r'(.*)中「(.*)」を削る'
+        pattern = r'(?:(.*)中)?「(.*)」を削る'
         match = re.match(pattern, text)
         if match:
-            self.at = Query(match.group(1))
+            if match.group(1):
+                self.at = Query(match.group(1))
+            else:
+                self.at = Query('')
             self.whats = match.group(2).split('」及び「')
             return True
         return False
