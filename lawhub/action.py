@@ -3,7 +3,7 @@ from enum import Enum
 from logging import getLogger
 
 from lawhub.nlp import normalize_last_verb, mask_escape
-from lawhub.query import Query
+from lawhub.query import Query, QueryType
 
 LOGGER = getLogger(__name__)
 
@@ -77,7 +77,12 @@ class Action:
         if match:
             self.at = Query(match.group(1).format(**placeholder_map))
             self.what = match.group(2).format(**placeholder_map)
-            return True
+            if self.at.query_type == QueryType.AFTER_WORD:
+                if len(self.what) > 2 and self.what[0] == '「' and self.what[-1] == '」':
+                    self.what = self.what[1:-1]
+                    return True
+            else:
+                return True
         return False
 
     def __init_delete__(self, text):

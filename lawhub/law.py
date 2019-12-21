@@ -56,7 +56,7 @@ def extract_text_from_sentence(node):
     return text.strip()
 
 
-def parse(node):
+def parse_xml(node):
     """
     XMLのnodeを与えられて、再帰的に子ノードまでBaseLawClassに変換した結果を返す
 
@@ -92,6 +92,15 @@ def parse(node):
         raise NotImplementedError(msg)
 
 
+def sort_law_tree(node):
+    for child in node.children:
+        sort_law_tree(child)
+    for sortable_class in [Article, Paragraph]:
+        if all(map(lambda x: isinstance(x, sortable_class), node.children)):
+            node.children.sort()
+            break
+
+
 class BaseLawClass:
     def __init__(self, title=None, children=None):
         self.title = title if title else ''
@@ -116,7 +125,7 @@ class BaseSectionClass(BaseLawClass):
 
     def from_xml(self, node):
         self.title = node[0].text
-        self.children = [parse(child) for child in node[1:]]
+        self.children = [parse_xml(child) for child in node[1:]]
         return self
 
     def __str__(self):
@@ -130,7 +139,7 @@ class BaseItemClass(BaseLawClass):
 
     def from_xml(self, node):
         self.sentence = INDENT.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
-        self.children = [parse(child) for child in node[2:]]
+        self.children = [parse_xml(child) for child in node[2:]]
         return self
 
     def __str__(self):
@@ -188,10 +197,10 @@ class Article(BaseLawClass):
         if node[0].tag == 'ArticleCaption' and node[1].tag == 'ArticleTitle':
             self.caption = node[0].text
             self.title = node[1].text
-            self.children = [parse(child) for child in node[2:]]
+            self.children = [parse_xml(child) for child in node[2:]]
         elif node[0].tag == 'ArticleTitle':
             self.title = node[0].text
-            self.children = [parse(child) for child in node[1:]]
+            self.children = [parse_xml(child) for child in node[1:]]
         else:
             assert False
         return self
@@ -204,13 +213,20 @@ class Article(BaseLawClass):
 
     def __eq__(self, other):
         if not isinstance(other, Article):
-            raise NotImplementedError()
+            raise NotImplementedError(f'can not compare \"{type(other)}\" with Article')
         return self.number == other.number
 
     def __lt__(self, other):
+        def clean(number):
+            return re.sub(r'[^0-9]', '_', number)  # adhoc fix to handle '226:227' in 昭和二十五年法律第二百三十九号
+
         if not isinstance(other, Article):
-            raise NotImplementedError()
-        for i, j in zip(map(lambda x: int(x), self.number.split('_')), map(lambda x: int(x), other.number.split('_'))):
+            raise NotImplementedError(f'can not compare \"{type(other)}\" with Article')
+
+        for i, j in zip(
+                map(lambda x: int(x), clean(self.number).split('_')),
+                map(lambda x: int(x), clean(other.number).split('_'))
+        ):
             if i < j:
                 return True
             elif i > j:
@@ -232,7 +248,7 @@ class Paragraph(BaseLawClass):
         self.number = int(node.attrib['Num'])
         self.title = '第{}項'.format(int2kanji(int(self.number)))
         self.sentence = extract_text_from_sentence(node[1][0])
-        self.children = [parse(child) for child in node[2:]]
+        self.children = [parse_xml(child) for child in node[2:]]
         return self
 
     def __str__(self):
@@ -242,13 +258,13 @@ class Paragraph(BaseLawClass):
         return body
 
     def __eq__(self, other):
-        if not isinstance(other, Article):
-            raise NotImplementedError()
+        if not isinstance(other, Paragraph):
+            raise NotImplementedError(f'can not compare \"{type(other)}\" with Paragraph')
         return self.number == other.number
 
     def __lt__(self, other):
-        if not isinstance(other, Article):
-            raise NotImplementedError()
+        if not isinstance(other, Paragraph):
+            raise NotImplementedError(f'can not compare \"{type(other)}" with Paragraph')
         return self.number < other.number
 
 
