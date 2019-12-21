@@ -43,3 +43,13 @@ def apply_add_after(action, query2node):
     idx = node.sentence.find(action.at.word) + len(action.at.word)
     node.sentence = node.sentence[:idx] + action.what + node.sentence[idx:]
     LOGGER.debug(f'added \"{action.what}\" at {action.at}')
+
+
+def apply_delete(action, query2node):
+    if action.at not in query2node:
+        raise NodeNotFoundError(action.at)
+    node = query2node[action.at]
+    if not (hasattr(node, 'sentence')) or action.what not in node.sentence:
+        raise TextNotFoundError(action.old, action.what)
+    node.sentence = node.sentence.replace(action.what, '')
+    LOGGER.debug(f'deleted \"{action.what}\" in {action.at}')

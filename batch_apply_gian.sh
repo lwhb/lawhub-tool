@@ -14,10 +14,11 @@ while read -r gian; do
   before=${gian%.*}.before
   after=${gian%.*}.after
   applied=${gian%.*}.applied
+  failed=${gian%.*}.failed
 
   ./get_law.py -g ${gian} -l ${law}
   if test -f "${law}"; then
     ./apply_gian.py -l ${law} -o ${before}
-    ./apply_gian.py -l ${law} -g ${gian} -o ${after} -s ${stat} -a ${applied}
+    ./apply_gian.py -l ${law} -g ${gian} -o ${after} -s ${stat} -a ${applied} -f ${failed}
   fi
 done <${dataset}
