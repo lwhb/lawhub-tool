@@ -42,7 +42,16 @@ class TestApply(TestCase):
     def test_delete(self):
         node = Paragraph(title='第一項', sentence='私はネコです')
         query2node = {Query('第一項'): node}
-        action = Action('第一項中「私は」を削る')
+        action = Action('第一項中「私は」及び「です」を削る')
 
         apply_delete(action, query2node)
-        self.assertEqual('ネコです', node.sentence)
+        self.assertEqual('ネコ', node.sentence)
+
+    def test_delete_fail(self):
+        node = Paragraph(title='第一項', sentence='私はネコです')
+        query2node = {Query('第一項'): node}
+        action = Action('第一項中「私は」及び「でした」を削る')
+
+        with self.assertRaises(TextNotFoundError):
+            apply_delete(action, query2node)
+        self.assertEqual('私はネコです', node.sentence)  # not changed

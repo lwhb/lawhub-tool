@@ -20,11 +20,13 @@ class TestAction(TestCase):
         self.assertEqual('について', action.what)
 
     def test_init_delete(self):
-        text = '第十四条中「その他」を削り'
+        text = '第十四条中「その他」及び「前項」を削り'
         action = Action(text)
 
         self.assertEqual(Query('第十四条'), action.at)
-        self.assertEqual('その他', action.what)
+        self.assertEqual(2, len(action.whats))
+        self.assertEqual('その他', action.whats[0])
+        self.assertEqual('前項', action.whats[1])
 
     def test_init_replace(self):
         text = '第一条中「第百二十五条」を「第百二十五条の二」に改める'

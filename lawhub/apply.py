@@ -49,7 +49,11 @@ def apply_delete(action, query2node):
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)
     node = query2node[action.at]
-    if not (hasattr(node, 'sentence')) or action.what not in node.sentence:
-        raise TextNotFoundError(action.old, action.what)
-    node.sentence = node.sentence.replace(action.what, '')
-    LOGGER.debug(f'deleted \"{action.what}\" in {action.at}')
+    if not (hasattr(node, 'sentence')):
+        raise TextNotFoundError('', action.at)
+    for what in action.whats:
+        if what not in node.sentence:
+            raise TextNotFoundError(what, action.at)
+    for what in action.whats:
+        node.sentence = node.sentence.replace(what, '')
+        LOGGER.debug(f'deleted \"{what}\" in {action.at}')
