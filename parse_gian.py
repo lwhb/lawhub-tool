@@ -61,7 +61,7 @@ def parse_actions(line, meta=None):
         process_count += 1
         try:
             action = Action(text, meta)
-            if action.action_type in (ActionType.ADD, ActionType.DELETE, ActionType.REPLACE):
+            if action.action_type in (ActionType.ADD_AFTER, ActionType.ADD, ActionType.DELETE, ActionType.REPLACE):
                 action.at = qc.compensate(action.at)
             elif action.action_type == ActionType.RENAME:
                 action.old = qc.compensate(action.old)

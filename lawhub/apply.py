@@ -1,6 +1,6 @@
 import logging
 
-from lawhub.query import QueryType
+from lawhub.action import ActionType
 
 LOGGER = logging.getLogger(__name__)
 
@@ -23,6 +23,8 @@ class TextNotFoundError(Exception):
 
 
 def apply_replace(action, query2node):
+    if action.action_type != ActionType.REPLACE:
+        raise ValueError(f'apply_replace() is called with invalid ActionType: {action.action_type}')
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)
     node = query2node[action.at]
@@ -33,19 +35,21 @@ def apply_replace(action, query2node):
 
 
 def apply_add_after(action, query2node):
-    if action.at.query_type != QueryType.AFTER_WORD:
-        raise ValueError(f'apply_add_after() is called with invalid QueryType: {action.at.query_type}')
+    if action.action_type != ActionType.ADD_AFTER:
+        raise ValueError(f'apply_add_after() is called with invalid ActionType: {action.action_type}')
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)
     node = query2node[action.at]
-    if not (hasattr(node, 'sentence')) or action.at.word not in node.sentence:
-        raise TextNotFoundError(action.at.word, action.at)
-    idx = node.sentence.find(action.at.word) + len(action.at.word)
+    if not (hasattr(node, 'sentence')) or action.word not in node.sentence:
+        raise TextNotFoundError(action.word, action.at)
+    idx = node.sentence.find(action.word) + len(action.word)
     node.sentence = node.sentence[:idx] + action.what + node.sentence[idx:]
     LOGGER.debug(f'added \"{action.what}\" at {action.at}')
 
 
 def apply_delete(action, query2node):
+    if action.action_type != ActionType.DELETE:
+        raise ValueError(f'apply_delete() is called with invalid ActionType: {action.action_type}')
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)
     node = query2node[action.at]

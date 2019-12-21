@@ -3,12 +3,13 @@ from enum import Enum
 from logging import getLogger
 
 from lawhub.nlp import normalize_last_verb, mask_escape
-from lawhub.query import Query, QueryType
+from lawhub.query import Query
 
 LOGGER = getLogger(__name__)
 
 
 class ActionType(str, Enum):
+    ADD_AFTER = 'add_after'
     ADD = 'add'
     DELETE = 'delete'
     REPLACE = 'replace'
@@ -34,7 +35,11 @@ class Action:
             self.text = data['text']
             self.meta = data['meta']
             self.action_type = ActionType(data['action_type'])
-            if self.action_type == ActionType.ADD:
+            if self.action_type == ActionType.ADD_AFTER:
+                self.at = Query(data['at'])
+                self.word = data['word']
+                self.what = data['what']
+            elif self.action_type == ActionType.ADD:
                 self.at = Query(data['at'])
                 self.what = data['what']
             elif self.action_type == ActionType.DELETE:
@@ -61,7 +66,9 @@ class Action:
             self.meta.update(meta)
 
         norm_text = normalize_last_verb(self.text)
-        if self.__init_add__(norm_text):
+        if self.__init_add_after__(norm_text):
+            self.action_type = ActionType.ADD_AFTER
+        elif self.__init_add__(norm_text):  # need to call after ADD_AFTER
             self.action_type = ActionType.ADD
         elif self.__init_delete__(norm_text):
             self.action_type = ActionType.DELETE
@@ -73,6 +80,19 @@ class Action:
             msg = f'failed to instantiate Action from text="{text}"'
             raise ValueError(msg)
 
+    def __init_add_after__(self, text):
+        pattern = r'(?:(.*)中)?「(.*)」の下に「(.*)」を(加える)?'
+        match = re.match(pattern, text)
+        if match:
+            if match.group(1):
+                self.at = Query(match.group(1))
+            else:
+                self.at = Query('')
+            self.word = match.group(2)
+            self.what = match.group(3)
+            return True
+        return False
+
     def __init_add__(self, text):
         pattern = r'(.*)に(.*)を加える'
         masked_text, placeholder_map = mask_escape(text)
@@ -80,12 +100,7 @@ class Action:
         if match:
             self.at = Query(match.group(1).format(**placeholder_map))
             self.what = match.group(2).format(**placeholder_map)
-            if self.at.query_type == QueryType.AFTER_WORD:
-                if len(self.what) > 2 and self.what[0] == '「' and self.what[-1] == '」':
-                    self.what = self.what[1:-1]
-                    return True
-            else:
-                return True
+            return True
         return False
 
     def __init_delete__(self, text):
@@ -125,7 +140,11 @@ class Action:
             'text': self.text,
             'meta': self.meta
         }
-        if self.action_type == ActionType.ADD:
+        if self.action_type == ActionType.ADD_AFTER:
+            data['at'] = self.at.to_dict()
+            data['word'] = self.word
+            data['what'] = self.what
+        elif self.action_type == ActionType.ADD:
             data['at'] = self.at.to_dict()
             data['what'] = self.what
         elif self.action_type == ActionType.DELETE:
@@ -144,7 +163,9 @@ class Action:
         return data
 
     def __repr__(self):
-        if self.action_type == ActionType.ADD:
+        if self.action_type == ActionType.ADD_AFTER:
+            return f'<ADD_AFTER at={self.at.text} word={self.word} what={self.what}>'
+        elif self.action_type == ActionType.ADD:
             return f'<ADD at={self.at.text} what={self.what}>'
         elif self.action_type == ActionType.DELETE:
             return f'<DELETE at={self.at.text} whats={self.whats}>'
@@ -161,7 +182,9 @@ class Action:
             return False
         if self.action_type != other.action_type:
             return False
-        if self.action_type == ActionType.ADD:
+        if self.action_type == ActionType.ADD_AFTER:
+            return self.at == other.at and self.word == other.word and self.what == other.what
+        elif self.action_type == ActionType.ADD:
             return self.at == other.at and self.what == other.what
         elif self.action_type == ActionType.DELETE:
             return self.at == other.at and self.whats == other.whats

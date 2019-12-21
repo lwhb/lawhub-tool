@@ -13,12 +13,22 @@ class TestAction(TestCase):
         self.assertEqual(Query('第二条'), action.at)
         self.assertEqual('次の二項', action.what)
 
-    def test_init_add_escape(self):
+    def test_init_add_after(self):
         text = '第二条中「前項」の下に「について」を加え'
         action = Action(text)
 
-        self.assertEqual(ActionType.ADD, action.action_type)
-        self.assertEqual(Query('第二条中「前項」の下'), action.at)
+        self.assertEqual(ActionType.ADD_AFTER, action.action_type)
+        self.assertEqual(Query('第二条'), action.at)
+        self.assertEqual('前項', action.word)
+        self.assertEqual('について', action.what)
+
+    def test_init_add_after_short(self):
+        text = '「前項」の下に「について」を'
+        action = Action(text)
+
+        self.assertEqual(ActionType.ADD_AFTER, action.action_type)
+        self.assertEqual(Query(''), action.at)
+        self.assertEqual('前項', action.word)
         self.assertEqual('について', action.what)
 
     def test_init_delete(self):
