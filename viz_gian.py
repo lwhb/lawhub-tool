@@ -27,17 +27,24 @@ def create_replace_pairs(gian_fp, applied_fps):
             idx2actions[idx].append(action)
         LOGGER.debug(f'Loaded {len(actions)} Actions from {applied_fp}')
 
-    count = 0
     pairs = []
+    replace_count = 0
     for idx, line in enumerate(lines):
         new_line = line
         for action in idx2actions[idx]:
-            if action.text not in new_line:
-                raise ValueError(f'failed to find in JSON: {action.text}@{line}')
-            new_line = new_line.replace(action.text, '<strike>' + action.text + '</strike>')
-            count += 1
+            count = new_line.count(action.text)
+            if count == 0:
+                LOGGER.warning(f'failed to find ActionText in JSON: {action.text}@{idx}')
+                LOGGER.debug(new_line)
+            elif count == 1:
+                new_line = new_line.replace(action.text, '<strike>' + action.text + '</strike>')
+                LOGGER.debug(f'stroked {action.text}@{idx}')
+                replace_count += 1
+            else:
+                LOGGER.warning(f'found multiple occurrence of ActionText in JSON: {action.text}@{idx}')
+                LOGGER.debug(new_line)
         pairs.append((line, new_line))
-    LOGGER.debug(f'Configured {count} replaces')
+    LOGGER.debug(f'Configured {replace_count} replaces for {len(lines)} lines')
     return pairs
 
 
@@ -46,6 +53,7 @@ def create_new_html(html_fp, replace_pairs):
         html = f.read()
         html = html.replace('shift_jis', 'utf-8')
         html = html.replace('−', '－')
+        html = html.replace('&#22625;', '塡')
     LOGGER.debug(f'Loaded HTML from {html_fp}')
 
     new_html = ''
@@ -53,9 +61,10 @@ def create_new_html(html_fp, replace_pairs):
     for (old_line, new_line) in replace_pairs:
         start = html.find(old_line, prev_end)
         if start == -1:
-            raise ValueError(f'failed to find in HTML: {old_line}')
-        new_html += (html[prev_end:start] + new_line)
-        prev_end = start + len(old_line)
+            LOGGER.warning(f'failed to find in HTML: {old_line}')
+        else:
+            new_html += (html[prev_end:start] + new_line)
+            prev_end = start + len(old_line)
     new_html += html[prev_end:]
 
     return new_html
