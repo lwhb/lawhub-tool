@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 from unittest import TestCase
 
-from lawhub.law import extract_law_hierarchy, LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE
+from lawhub.law import extract_law_hierarchy, LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph
 
 
 class TestLaw(TestCase):
@@ -32,6 +32,7 @@ class TestLaw(TestCase):
     def test_chapter(self):
         fp = './resource/chapter.xml'
         chapter = parse_xml(ET.parse(fp).getroot())
+        self.assertTrue(isinstance(chapter, Chapter))
         self.assertEqual('第一章　総則', chapter.title)
         self.assertEqual(0, len(chapter.children))
         self.assertEqual('第一章　総則\n', str(chapter))
@@ -39,6 +40,7 @@ class TestLaw(TestCase):
     def test_article(self):
         fp = './resource/article.xml'
         article = parse_xml(ET.parse(fp).getroot())
+        self.assertTrue(isinstance(article, Article))
         self.assertEqual('（登記簿等の持出禁止）', article.caption)
         self.assertEqual('第七条の二', article.title)
         self.assertEqual('7_2', article.number)
@@ -50,6 +52,15 @@ class TestLaw(TestCase):
         self.assertTrue(Article(number='2_1') < Article(number='2_2'))
         self.assertTrue(Article(number='2_1') < Article(number='2_10'))
         self.assertTrue(Article(number='2') < Article(number='2_1'))
+
+    def test_paragraph(self):
+        fp = './resource/paragraph.xml'
+        paragraph = parse_xml(ET.parse(fp).getroot())
+        self.assertTrue(isinstance(paragraph, Paragraph))
+        self.assertEqual(1, paragraph.number)
+        self.assertEqual('第一項', paragraph.title)
+        self.assertEqual('本文ただし書', paragraph.sentence)
+        self.assertEqual(0, len(paragraph.children))
 
     def test_item(self):
         fp = './resource/item.xml'
