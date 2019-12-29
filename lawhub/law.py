@@ -247,7 +247,7 @@ class Paragraph(BaseLawClass):
         assert 'Num' in node.attrib
         self.number = int(node.attrib['Num'])
         self.title = '第{}項'.format(int2kanji(int(self.number)))
-        self.sentence = extract_text_from_sentence(node[1][0])
+        self.sentence = ''.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
         self.children = [parse_xml(child) for child in node[2:]]
         return self
 

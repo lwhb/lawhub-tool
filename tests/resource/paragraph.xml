@@ -1,0 +1,11 @@
+<Paragraph Num="1">
+    <ParagraphNum/>
+    <ParagraphSentence>
+        <Sentence Function="main" Num="1">
+            本文
+        </Sentence>
+        <Sentence Function="proviso" Num="2">
+            ただし書
+        </Sentence>
+    </ParagraphSentence>
+</Paragraph>
