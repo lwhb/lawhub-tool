@@ -68,8 +68,8 @@ def parse_actions(line, meta=None):
                 action.new = qc.compensate(action.new)
             actions.append(action)
             success_count += 1
-        except ValueError:
-            pass
+        except ValueError as e:
+            LOGGER.debug(e)
 
     return actions, process_count, success_count
 

@@ -150,6 +150,10 @@ class BaseItemClass(BaseLawClass):
 
 
 class Part(BaseSectionClass):
+    def __init__(self, title=None, children=None):
+        super().__init__(title, children)
+        self.hierarchy = LawHierarchy.PART
+
     def from_xml(self, node):
         assert node.tag == 'Part'
         assert node[0].tag == 'PartTitle'
@@ -157,6 +161,10 @@ class Part(BaseSectionClass):
 
 
 class Chapter(BaseSectionClass):
+    def __init__(self, title=None, children=None):
+        super().__init__(title, children)
+        self.hierarchy = LawHierarchy.CHAPTER
+
     def from_xml(self, node):
         assert node.tag == 'Chapter'
         assert node[0].tag == 'ChapterTitle'
@@ -164,6 +172,10 @@ class Chapter(BaseSectionClass):
 
 
 class Section(BaseSectionClass):
+    def __init__(self, title=None, children=None):
+        super().__init__(title, children)
+        self.hierarchy = LawHierarchy.SECTION
+
     def from_xml(self, node):
         assert node.tag == 'Section'
         assert node[0].tag == 'SectionTitle'
@@ -171,6 +183,10 @@ class Section(BaseSectionClass):
 
 
 class Subsection(BaseSectionClass):
+    def __init__(self, title=None, children=None):
+        super().__init__(title, children)
+        self.hierarchy = LawHierarchy.SUBSECTION
+
     def from_xml(self, node):
         assert node.tag == 'Subsection'
         assert node[0].tag == 'SubsectionTitle'
@@ -178,6 +194,10 @@ class Subsection(BaseSectionClass):
 
 
 class Division(BaseSectionClass):
+    def __init__(self, title=None, children=None):
+        super().__init__(title, children)
+        self.hierarchy = LawHierarchy.DIVISION
+
     def from_xml(self, node):
         assert node.tag == 'Division'
         assert node[0].tag == 'DivisionTitle'
@@ -187,6 +207,7 @@ class Division(BaseSectionClass):
 class Article(BaseLawClass):
     def __init__(self, title=None, caption=None, number=None, children=None):
         super().__init__(title, children)
+        self.hierarchy = LawHierarchy.ARTICLE
         self.caption = caption if caption else ''
         self.number = number if number else '1'
 
@@ -237,6 +258,7 @@ class Article(BaseLawClass):
 class Paragraph(BaseLawClass):
     def __init__(self, title=None, number=None, sentence=None, children=None):
         super().__init__(title, children)
+        self.hierarchy = LawHierarchy.PARAGRAPH
         self.number = number if number else 1
         self.sentence = sentence if sentence else ''
 
@@ -269,6 +291,10 @@ class Paragraph(BaseLawClass):
 
 
 class Item(BaseItemClass):
+    def __init__(self, title=None, sentence=None, children=None):
+        super().__init__(title, sentence, children)
+        self.hierarchy = LawHierarchy.ITEM
+
     def from_xml(self, node):
         assert node.tag == 'Item'
         assert node[0].tag == 'ItemTitle'
@@ -284,6 +310,10 @@ class Item(BaseItemClass):
 
 
 class Subitem1(BaseItemClass):
+    def __init__(self, title=None, sentence=None, children=None):
+        super().__init__(title, sentence, children)
+        self.hierarchy = LawHierarchy.SUBITEM1
+
     def from_xml(self, node):
         assert node.tag == 'Subitem1'
         assert node[0].tag == 'Subitem1Title'
@@ -296,6 +326,10 @@ class Subitem1(BaseItemClass):
 
 
 class Subitem2(BaseItemClass):
+    def __init__(self, title=None, sentence=None, children=None):
+        super().__init__(title, sentence, children)
+        self.hierarchy = LawHierarchy.SUBITEM2
+
     def from_xml(self, node):
         assert node.tag == 'Subitem2'
         assert node[0].tag == 'Subitem2Title'
@@ -305,3 +339,132 @@ class Subitem2(BaseItemClass):
 
     def __str__(self):
         return INDENT * 3 + super().__str__()
+
+
+class LawTreeBuilder:
+    """
+    Build LawTree bottom-up
+    """
+
+    def __init__(self):
+        self.hrchy2nodes = dict()
+        for hrchy in LawHierarchy:
+            self.hrchy2nodes[hrchy] = list()
+
+    def add(self, node):
+        try:
+            children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
+        except ValueError as e:
+            msg = 'failed to add new node as there are active child nodes at multiple hierarchy'
+            raise ValueError(msg) from e
+        if children:
+            node.children = children
+        self.hrchy2nodes[node.hierarchy].append(node)
+
+    def build(self):
+        try:
+            return self._get_children(parent_hrchy=None, flush=False)
+        except ValueError as e:
+            msg = 'failed to build LawTree as there are active nodes at multiple hierarchy'
+            raise ValueError(msg) from e
+
+    def _get_children(self, parent_hrchy, flush):
+        child_hrchy_list = list()
+        flag = True if parent_hrchy is None else False
+        for hrchy in LawHierarchy:
+            if hrchy == parent_hrchy:
+                flag = True
+            elif flag and self.hrchy2nodes[hrchy]:
+                child_hrchy_list.append(hrchy)
+
+        if len(child_hrchy_list) == 0:
+            return list()
+        elif len(child_hrchy_list) == 1:
+            child_hrchy = child_hrchy_list[0]
+            children = self.hrchy2nodes[child_hrchy][::-1]
+            if flush:
+                self.hrchy2nodes[child_hrchy] = list()
+            return children
+        else:
+            msg = 'found multiple child hierarchy under {0} ({1})'.format(
+                parent_hrchy.value,
+                ','.join(map(lambda x: x.value, child_hrchy_list))
+            )
+            raise ValueError(msg)
+
+
+def title_to_hierarchy(text):
+    hrchy2pattern = {
+        LawHierarchy.PART: r'第[{0}]+編'.format(NUMBER_KANJI),
+        LawHierarchy.CHAPTER: r'第[{0}]+章'.format(NUMBER_KANJI),
+        LawHierarchy.SECTION: r'第[{0}]+節'.format(NUMBER_KANJI),
+        LawHierarchy.SUBSECTION: r'第[{0}]+款'.format(NUMBER_KANJI),
+        LawHierarchy.DIVISION: r'第[{0}]+目'.format(NUMBER_KANJI),
+        LawHierarchy.ARTICLE: r'第[{0}]+条(の[{0}]+)*'.format(NUMBER_KANJI),
+        LawHierarchy.PARAGRAPH: r'[{0}]+|[{1}]+'.format(NUMBER_ROMAN, '0-9'),
+        LawHierarchy.ITEM: r'[{0}]+'.format(NUMBER_KANJI),
+        LawHierarchy.SUBITEM1: r'[{0}]'.format(IROHA),
+        LawHierarchy.SUBITEM2: r'（[{0}]+）'.format(NUMBER_ROMAN)
+    }
+    for hrchy, pattern in hrchy2pattern.items():
+        m = re.fullmatch(pattern, text)
+        if m:
+            return hrchy
+    return None
+
+
+def line_to_node(text):
+    chunks = text.strip().split()
+    maybe_title = chunks[0]
+    maybe_sentence = ' '.join(chunks[1:])
+    maybe_hrchy = title_to_hierarchy(maybe_title)
+    if maybe_hrchy == LawHierarchy.PART:
+        return Part(title=maybe_title)
+    elif maybe_hrchy == LawHierarchy.CHAPTER:
+        return Chapter(title=maybe_title)
+    elif maybe_hrchy == LawHierarchy.SECTION:
+        return Section(title=maybe_title)
+    elif maybe_hrchy == LawHierarchy.SUBSECTION:
+        return Subsection(title=maybe_title)
+    elif maybe_hrchy == LawHierarchy.DIVISION:
+        return Division(title=maybe_title)
+    elif maybe_hrchy == LawHierarchy.ARTICLE:
+        return Article(title=maybe_title)
+    elif maybe_hrchy == LawHierarchy.PARAGRAPH:
+        return Paragraph(number=int(maybe_title), sentence=maybe_sentence)
+    elif maybe_hrchy == LawHierarchy.ITEM:
+        return Item(title='第' + maybe_title + '号', sentence=maybe_sentence)
+    elif maybe_hrchy == LawHierarchy.SUBITEM1:
+        return Subitem1(title=maybe_title, sentence=maybe_sentence)
+    elif maybe_hrchy == LawHierarchy.SUBITEM2:
+        return Subitem2(title=maybe_title, sentence=maybe_sentence)
+    return None
+
+
+def build_law_tree(text):
+    lines = [line for line in text.split('\n') if line.strip() != '']
+    law_tree_builder = LawTreeBuilder()
+
+    idx = len(lines) - 1
+    while idx >= 0:
+        line = lines[idx]
+        idx -= 1
+        maybe_node = line_to_node(line)
+        if maybe_node is None:
+            LOGGER.warning(f'failed to process {line} @ {idx + 2}')  # +2 for 1-origin
+            continue
+        if maybe_node.hierarchy == LawHierarchy.ARTICLE:
+            # set paragraph in the line if exists
+            chunks = line.strip().split()
+            if len(chunks) > 1:
+                paragraph = Paragraph(title='第一項', number=1, sentence=' '.join(chunks[1:]))
+                law_tree_builder.add(paragraph)
+
+            # set caption in the previous line if exists
+            m = re.fullmatch(r'（.+）', lines[idx].strip())
+            if m:
+                maybe_node.caption = m.group()
+                idx -= 1
+        law_tree_builder.add(maybe_node)
+
+    return law_tree_builder.build()
