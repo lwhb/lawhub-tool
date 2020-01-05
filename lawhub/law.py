@@ -352,7 +352,11 @@ class LawTreeBuilder:
             self.hrchy2nodes[hrchy] = list()
 
     def add(self, node):
-        children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
+        try:
+            children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
+        except ValueError as e:
+            msg = 'failed to add new node as there are active child nodes at multiple hierarchy'
+            raise ValueError(msg) from e
         if children:
             node.children = children
         self.hrchy2nodes[node.hierarchy].append(node)
@@ -362,7 +366,7 @@ class LawTreeBuilder:
             return self._get_children(parent_hrchy=None, flush=False)
         except ValueError as e:
             msg = 'failed to build LawTree as there are active nodes at multiple hierarchy'
-            raise ValueError(msg, e)
+            raise ValueError(msg) from e
 
     def _get_children(self, parent_hrchy, flush):
         child_hrchy_list = list()
@@ -382,7 +386,10 @@ class LawTreeBuilder:
                 self.hrchy2nodes[child_hrchy] = list()
             return children
         else:
-            msg = f'found multiple child hierarchy under {parent_hrchy}: {child_hrchy_list}'
+            msg = 'found multiple child hierarchy under {0} ({1})'.format(
+                parent_hrchy.value,
+                ','.join(map(lambda x: x.value, child_hrchy_list))
+            )
             raise ValueError(msg)
 
 
