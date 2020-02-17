@@ -70,14 +70,13 @@ def create_new_html(html_fp, replace_pairs):
     return new_html
 
 
-def main(gian_fp, out_fp):
+def main(gian_fp, in_fp, out_fp):
     gian_fp = Path(gian_fp)
-    html_fp = gian_fp.with_suffix('.html')
     applied_fps = Path(gian_fp).parent.glob('*.applied')
 
     try:
         replace_pairs = create_replace_pairs(gian_fp, applied_fps)
-        new_html = create_new_html(html_fp, replace_pairs)
+        new_html = create_new_html(in_fp, replace_pairs)
     except Exception as e:
         msg = f'failed to visualize {gian_fp}: {e}'
         LOGGER.error(msg)
@@ -91,7 +90,8 @@ def main(gian_fp, out_fp):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='議案ファイル（.json）に対し、自動処理された箇所をHTMLで可視化する')
     parser.add_argument('-g', '--gian', help='議案ファイル(.json)', required=True)
-    parser.add_argument('-o', '--out', required=True)
+    parser.add_argument('-i', '--input', required=True)
+    parser.add_argument('-o', '--output', required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
@@ -102,4 +102,4 @@ if __name__ == '__main__':
     )
     LOGGER.info(f'Start viz_gian with {args}')
 
-    main(args.gian, args.out)
+    main(args.gian, args.input, args.output)
