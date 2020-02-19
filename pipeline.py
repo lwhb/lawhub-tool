@@ -114,9 +114,10 @@ class ApplyGianTask(BashTaskTemplate):
                 law_fp = jsonl_fp.with_suffix('.xml')
                 before_fp = jsonl_fp.with_suffix('.before')
                 after_fp = jsonl_fp.with_suffix('.after')
+                applied_fp = jsonl_fp.with_suffix('.applied')
                 if law_fp.exists():
                     before_cmd = f'cd {SCRIPT_ROOT} && ./apply_gian.py -l {law_fp} -o {before_fp}'
-                    after_cmd = f'cd {SCRIPT_ROOT} && ./apply_gian.py -g {jsonl_fp} -l {law_fp} -o {after_fp} -s {stat_fp}'
+                    after_cmd = f'cd {SCRIPT_ROOT} && ./apply_gian.py -g {jsonl_fp} -a {applied_fp} -l {law_fp} -o {after_fp} -s {stat_fp}'
                     self.commands.append(before_cmd)
                     self.commands.append(after_cmd)
 
