@@ -64,6 +64,8 @@ class Serializable(ToDictMixin, metaclass=Registry):
 
     @classmethod
     def deserialize(cls, data):
+        # noinspection PyUnresolvedReferences
+        import lawhub.action, lawhub.query, lawhub.law  # update Registry
         return cls.from_dict(json.loads(data))
 
 

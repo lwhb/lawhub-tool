@@ -5,6 +5,8 @@ import logging
 import subprocess
 from pathlib import Path
 
+from tqdm import tqdm
+
 LOGGER = logging.getLogger(__name__)
 SCRIPT_ROOT = Path('/Users/musui/lawhub/lawhub-tool')
 
@@ -49,7 +51,7 @@ class BashTaskTemplate:
             self.__repr__(),
             len(self.commands))
         )
-        for command in self.commands:
+        for command in tqdm(self.commands):
             LOGGER.debug(command)
             result = subprocess.run(command, capture_output=True, shell=True)
             self.results.append(result)
