@@ -6,7 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
-from lawhub.action import Action
+from lawhub.serializable import Serializable
 
 LOGGER = logging.getLogger('apply_gian')
 
@@ -21,7 +21,7 @@ def create_replace_pairs(gian_fp, applied_fps):
 
     idx2actions = {idx: [] for idx in range(len(lines))}
     for applied_fp in applied_fps:
-        actions = [Action(json.loads(line)) for line in open(applied_fp, 'r')]
+        actions = [Serializable.deserialize(line) for line in open(applied_fp, 'r')]
         for action in actions:
             idx = action.meta['line']
             idx2actions[idx].append(action)

@@ -1,6 +1,6 @@
 import logging
 
-from lawhub.action import ActionType
+from lawhub.action import ReplaceAction, AddAfterAction, DeleteAction
 
 LOGGER = logging.getLogger(__name__)
 
@@ -32,8 +32,8 @@ class MultipleTextFoundError(Exception):
 
 
 def apply_replace(action, query2node):
-    if action.action_type != ActionType.REPLACE:
-        raise ValueError(f'apply_replace() is called with invalid ActionType: {action.action_type}')
+    if not isinstance(action, ReplaceAction):
+        raise ValueError(f'apply_replace() is called with invalid action type: {action}')
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)
     node = query2node[action.at]
@@ -46,8 +46,8 @@ def apply_replace(action, query2node):
 
 
 def apply_add_after(action, query2node):
-    if action.action_type != ActionType.ADD_AFTER:
-        raise ValueError(f'apply_add_after() is called with invalid ActionType: {action.action_type}')
+    if not isinstance(action, AddAfterAction):
+        raise ValueError(f'apply_add_after() is called with invalid action type: {action}')
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)
     node = query2node[action.at]
@@ -61,8 +61,8 @@ def apply_add_after(action, query2node):
 
 
 def apply_delete(action, query2node):
-    if action.action_type != ActionType.DELETE:
-        raise ValueError(f'apply_delete() is called with invalid ActionType: {action.action_type}')
+    if not isinstance(action, DeleteAction):
+        raise ValueError(f'apply_delete() is called with invalid action type: {action}')
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)
     node = query2node[action.at]

@@ -69,6 +69,7 @@ class BashTaskTemplate:
                 for result in results:
                     f.write(result.args + '\n')
                     f.write(result.stderr.decode('utf-8'))
+                f.write('\n')
 
 
 class ParseGianTask(BashTaskTemplate):

@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-from lawhub.action import Action, ActionType
+from lawhub.action import parse_action_text, AddAfterAction, AddAction, DeleteAction, ReplaceAction, RenameAction
 from lawhub.nlp import split_with_escape
 from lawhub.query import QueryCompensator
 from lawhub.util import StatsFactory
@@ -60,10 +60,10 @@ def parse_actions(line, meta=None):
     for text in split_with_escape(line.strip()):
         process_count += 1
         try:
-            action = Action(text, meta)
-            if action.action_type in (ActionType.ADD_AFTER, ActionType.ADD, ActionType.DELETE, ActionType.REPLACE):
+            action = parse_action_text(text, meta)
+            if isinstance(action, (AddAfterAction, AddAction, DeleteAction, ReplaceAction)):
                 action.at = qc.compensate(action.at)
-            elif action.action_type == ActionType.RENAME:
+            elif isinstance(action, RenameAction):
                 action.old = qc.compensate(action.old)
                 action.new = qc.compensate(action.new)
             actions.append(action)
