@@ -1,9 +1,9 @@
 import copy
-import re
 from enum import Enum
 from logging import getLogger
 
 from lawhub.law import LawHierarchy, extract_law_hierarchy
+from lawhub.serializable import Serializable
 
 LOGGER = getLogger(__name__)
 
@@ -13,58 +13,27 @@ class QueryType(str, Enum):
     AFTER_HIERARCHY = 'after_hierarchy'
 
 
-class Query:
+class Query(Serializable):
     """
     法令内の位置を表現するクラス
     """
 
     law_hierarchy_lst = [LawHierarchy.ARTICLE, LawHierarchy.PARAGRAPH, LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2]
 
-    def __init__(self, obj):
-        if isinstance(obj, dict):
-            self.__init_by_dict__(obj)
-        elif isinstance(obj, str):
-            self.__init_by_str__(obj)
+    def __init__(self, text, hierarchy=None):
+        if text is None:
+            text = ''
+        self.text = text
+        if hierarchy:
+            self.hierarchy = hierarchy
         else:
-            msg = f'Failed to instantiate Query from {type(obj)}'
-            raise NotImplementedError(msg)
+            self.hierarchy = dict()
+            for hrchy in Query.law_hierarchy_lst:
+                self.set(hrchy, extract_law_hierarchy(text, hrchy))  # default ''
 
-    def __init_by_dict__(self, data):
-        try:
-            self.query_type = QueryType(data['query_type'])
-            self.text = data['text']
-            self.hierarchy = data['hierarchy']
-        except Exception as e:
-            msg = f'Failed to instantiate Query from {data}: {e}'
-            raise ValueError(msg)
-
-    def __init_by_str__(self, text):
-        self.text = text  # ToDo: 複数箇所を指定している場合に対応する
-
-        if self.__init_after_hierarchy__(text):
-            self.query_type = QueryType.AFTER_HIERARCHY
-        elif self.__init_at_hierarchy__(text):  # always success
-            self.query_type = QueryType.AT_HIERARCHY
-        else:
-            msg = f'Failed to instantiate Query with text="{text}"'
-            raise ValueError(msg)
-
-    def __init_hierarchy__(self, text):
-        self.hierarchy = dict()
-        for hrchy in Query.law_hierarchy_lst:
-            self.set(hrchy, extract_law_hierarchy(text, hrchy))  # default ''
-
-    def __init_at_hierarchy__(self, text):
-        self.__init_hierarchy__(text)
-        return True
-
-    def __init_after_hierarchy__(self, text):
-        pattern = r'(.*)の次'
-        match = re.match(pattern, text)
-        if match:
-            self.__init_hierarchy__(match.group(1))
-            return True
-        return False
+    @classmethod
+    def from_text(cls, text):
+        return cls(text=text)
 
     def __eq__(self, other):
         if not (isinstance(other, Query)):
@@ -99,14 +68,9 @@ class Query:
 
     def is_empty(self):
         for val in self.hierarchy.values():
-            if val != '':
+            if val:
                 return False
         return True
-
-    def to_dict(self):
-        return {'query_type': self.query_type,
-                'text': self.text,
-                'hierarchy': self.hierarchy}
 
 
 class QueryCompensator:

@@ -5,6 +5,7 @@ from logging import getLogger
 
 from lawhub.constants import NUMBER_KANJI, IROHA, NUMBER_ROMAN
 from lawhub.kanzize import int2kanji
+from lawhub.serializable import Serializable
 
 LOGGER = getLogger(__name__)
 SPACE = ' '
@@ -64,25 +65,25 @@ def parse_xml(node):
     :return: node in BaseLawClass tree
     """
     if node.tag == 'Part':
-        return Part().from_xml(node)
+        return Part.from_xml(node)
     elif node.tag == 'Chapter':
-        return Chapter().from_xml(node)
+        return Chapter.from_xml(node)
     elif node.tag == 'Section':
-        return Section().from_xml(node)
+        return Section.from_xml(node)
     elif node.tag == 'Subsection':
-        return Subsection().from_xml(node)
+        return Subsection.from_xml(node)
     elif node.tag == 'Division':
-        return Division().from_xml(node)
+        return Division.from_xml(node)
     elif node.tag == 'Article':
-        return Article().from_xml(node)
+        return Article.from_xml(node)
     elif node.tag == 'Paragraph':
-        return Paragraph().from_xml(node)
+        return Paragraph.from_xml(node)
     elif node.tag == 'Item':
-        return Item().from_xml(node)
+        return Item.from_xml(node)
     elif node.tag == 'Subitem1':
-        return Subitem1().from_xml(node)
+        return Subitem1.from_xml(node)
     elif node.tag == 'Subitem2':
-        return Subitem2().from_xml(node)
+        return Subitem2.from_xml(node)
     elif node.tag == 'TableStruct':
         return BaseLawClass(title='<表略>')
     elif node.tag == 'List':
@@ -101,7 +102,7 @@ def sort_law_tree(node):
             break
 
 
-class BaseLawClass:
+class BaseLawClass(Serializable):
     def __init__(self, title=None, children=None):
         self.title = title if title else ''
         self.children = children if children else list()
@@ -120,111 +121,90 @@ class BaseLawClass:
 
 
 class BaseSectionClass(BaseLawClass):
-    def __init__(self, title=None, children=None):
-        super().__init__(title, children)
-
-    def from_xml(self, node):
-        self.title = node[0].text
-        self.children = [parse_xml(child) for child in node[1:]]
-        return self
+    @classmethod
+    def from_xml(cls, node):
+        title = node[0].text
+        children = [parse_xml(child) for child in node[1:]]
+        return cls(title=title, children=children)
 
     def __str__(self):
         return super().__str__() + '\n'
 
 
-class BaseItemClass(BaseLawClass):
-    def __init__(self, title=None, sentence=None, children=None):
-        super().__init__(title, children)
-        self.sentence = sentence if sentence else ''
-
-    def from_xml(self, node):
-        self.sentence = INDENT.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
-        self.children = [parse_xml(child) for child in node[2:]]
-        return self
-
-    def __str__(self):
-        body = self.title + SPACE + self.sentence
-        if self.children:
-            body += '\n' + self.__str_children__()
-        return body
-
-
 class Part(BaseSectionClass):
-    def __init__(self, title=None, children=None):
-        super().__init__(title, children)
-        self.hierarchy = LawHierarchy.PART
+    hierarchy = LawHierarchy.PART
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Part'
         assert node[0].tag == 'PartTitle'
         return super().from_xml(node)
 
 
 class Chapter(BaseSectionClass):
-    def __init__(self, title=None, children=None):
-        super().__init__(title, children)
-        self.hierarchy = LawHierarchy.CHAPTER
+    hierarchy = LawHierarchy.CHAPTER
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Chapter'
         assert node[0].tag == 'ChapterTitle'
         return super().from_xml(node)
 
 
 class Section(BaseSectionClass):
-    def __init__(self, title=None, children=None):
-        super().__init__(title, children)
-        self.hierarchy = LawHierarchy.SECTION
+    hierarchy = LawHierarchy.SECTION
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Section'
         assert node[0].tag == 'SectionTitle'
         return super().from_xml(node)
 
 
 class Subsection(BaseSectionClass):
-    def __init__(self, title=None, children=None):
-        super().__init__(title, children)
-        self.hierarchy = LawHierarchy.SUBSECTION
+    hierarchy = LawHierarchy.SUBSECTION
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Subsection'
         assert node[0].tag == 'SubsectionTitle'
         return super().from_xml(node)
 
 
 class Division(BaseSectionClass):
-    def __init__(self, title=None, children=None):
-        super().__init__(title, children)
-        self.hierarchy = LawHierarchy.DIVISION
+    hierarchy = LawHierarchy.DIVISION
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Division'
         assert node[0].tag == 'DivisionTitle'
         return super().from_xml(node)
 
 
 class Article(BaseLawClass):
+    hierarchy = LawHierarchy.ARTICLE
+
     def __init__(self, title=None, caption=None, number=None, children=None):
         super().__init__(title, children)
-        self.hierarchy = LawHierarchy.ARTICLE
         self.caption = caption if caption else ''
         self.number = number if number else '1'
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Article'
         assert 'Num' in node.attrib
-        self.number = node.attrib['Num']
+        number = node.attrib['Num']
         if node[0].tag == 'ArticleCaption' and node[1].tag == 'ArticleTitle':
-            self.caption = node[0].text
-            self.title = node[1].text
-            self.children = [parse_xml(child) for child in node[2:]]
+            caption = node[0].text
+            title = node[1].text
+            children = [parse_xml(child) for child in node[2:]]
         elif node[0].tag == 'ArticleTitle':
-            self.title = node[0].text
-            self.children = [parse_xml(child) for child in node[1:]]
+            caption = None
+            title = node[0].text
+            children = [parse_xml(child) for child in node[1:]]
         else:
             assert False
-        return self
+        return cls(title=title, caption=caption, number=number, children=children)
 
     def __str__(self):
         body = self.caption + '\n' + self.title if self.caption else self.title
@@ -244,10 +224,8 @@ class Article(BaseLawClass):
         if not isinstance(other, Article):
             raise NotImplementedError(f'can not compare \"{type(other)}\" with Article')
 
-        for i, j in zip(
-                map(lambda x: int(x), clean(self.number).split('_')),
-                map(lambda x: int(x), clean(other.number).split('_'))
-        ):
+        for i, j in zip(map(lambda x: int(x), clean(self.number).split('_')),
+                        map(lambda x: int(x), clean(other.number).split('_'))):
             if i < j:
                 return True
             elif i > j:
@@ -256,22 +234,24 @@ class Article(BaseLawClass):
 
 
 class Paragraph(BaseLawClass):
+    hierarchy = LawHierarchy.PARAGRAPH
+
     def __init__(self, title=None, number=None, sentence=None, children=None):
         super().__init__(title, children)
-        self.hierarchy = LawHierarchy.PARAGRAPH
         self.number = number if number else 1
         self.sentence = sentence if sentence else ''
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Paragraph'
         assert node[0].tag == 'ParagraphNum'
         assert node[1].tag == 'ParagraphSentence'
         assert 'Num' in node.attrib
-        self.number = int(node.attrib['Num'])
-        self.title = '第{}項'.format(int2kanji(int(self.number)))
-        self.sentence = ''.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
-        self.children = [parse_xml(child) for child in node[2:]]
-        return self
+        number = int(node.attrib['Num'])
+        title = '第{}項'.format(int2kanji(int(number)))
+        sentence = ''.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
+        children = [parse_xml(child) for child in node[2:]]
+        return cls(title=title, number=number, sentence=sentence, children=children)
 
     def __str__(self):
         body = str(self.number) + SPACE + self.sentence
@@ -290,16 +270,38 @@ class Paragraph(BaseLawClass):
         return self.number < other.number
 
 
-class Item(BaseItemClass):
+class BaseItemClass(BaseLawClass):
     def __init__(self, title=None, sentence=None, children=None):
-        super().__init__(title, sentence, children)
-        self.hierarchy = LawHierarchy.ITEM
+        super().__init__(title, children)
+        self.sentence = sentence if sentence else ''
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
+        title = node[0].text
+        sentence = INDENT.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
+        children = [parse_xml(child) for child in node[2:]]
+        return cls(title=title, sentence=sentence, children=children)
+
+    def __str__(self):
+        body = self.title + SPACE + self.sentence
+        if self.children:
+            body += '\n' + self.__str_children__()
+        return body
+
+
+class Item(BaseItemClass):
+    hierarchy = LawHierarchy.ITEM
+
+    def __init__(self, title=None, sentence=None, children=None):
+        if not (len(title) > 2 and title[0] == '第' and title[-1] == '号'):
+            title = f'第{title}号'
+        super().__init__(title, sentence, children)
+
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Item'
         assert node[0].tag == 'ItemTitle'
         assert node[1].tag == 'ItemSentence'
-        self.title = '第{}号'.format(node[0].text)
         return super().from_xml(node)
 
     def __str__(self):
@@ -310,15 +312,13 @@ class Item(BaseItemClass):
 
 
 class Subitem1(BaseItemClass):
-    def __init__(self, title=None, sentence=None, children=None):
-        super().__init__(title, sentence, children)
-        self.hierarchy = LawHierarchy.SUBITEM1
+    hierarchy = LawHierarchy.SUBITEM1
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Subitem1'
         assert node[0].tag == 'Subitem1Title'
         assert node[1].tag == 'Subitem1Sentence'
-        self.title = node[0].text
         return super().from_xml(node)
 
     def __str__(self):
@@ -326,15 +326,16 @@ class Subitem1(BaseItemClass):
 
 
 class Subitem2(BaseItemClass):
+    hierarchy = LawHierarchy.SUBITEM2
+
     def __init__(self, title=None, sentence=None, children=None):
         super().__init__(title, sentence, children)
-        self.hierarchy = LawHierarchy.SUBITEM2
 
-    def from_xml(self, node):
+    @classmethod
+    def from_xml(cls, node):
         assert node.tag == 'Subitem2'
         assert node[0].tag == 'Subitem2Title'
         assert node[1].tag == 'Subitem2Sentence'
-        self.title = node[0].text
         return super().from_xml(node)
 
     def __str__(self):
@@ -433,7 +434,7 @@ def line_to_node(text):
     elif maybe_hrchy == LawHierarchy.PARAGRAPH:
         return Paragraph(number=int(maybe_title), sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.ITEM:
-        return Item(title='第' + maybe_title + '号', sentence=maybe_sentence)
+        return Item(title=maybe_title, sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.SUBITEM1:
         return Subitem1(title=maybe_title, sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.SUBITEM2:

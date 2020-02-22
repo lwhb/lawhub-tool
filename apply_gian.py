@@ -6,10 +6,11 @@ import logging
 import sys
 import xml.etree.ElementTree as ET
 
-from lawhub.action import Action, ActionType
+from lawhub.action import ReplaceAction, AddAfterAction, DeleteAction
 from lawhub.apply import apply_replace, apply_add_after, apply_delete
 from lawhub.law import parse_xml
 from lawhub.query import Query
+from lawhub.serializable import Serializable
 from lawhub.util import StatsFactory
 
 LOGGER = logging.getLogger('apply_gian')
@@ -37,13 +38,7 @@ def build_query2node(nodes):
 
 
 def is_target_action(action):
-    if action.action_type == ActionType.REPLACE:
-        return True
-    if action.action_type == ActionType.ADD_AFTER:
-        return True
-    if action.action_type == ActionType.DELETE:
-        return True
-    return False
+    return isinstance(action, (ReplaceAction, AddAfterAction, DeleteAction))
 
 
 def apply_gian(gian_fp, query2node):
@@ -53,14 +48,14 @@ def apply_gian(gian_fp, query2node):
         for line in f:
             if line[:2] == '!!' or line[:2] == '//':
                 continue
-            action = Action(json.loads(line))
+            action = Serializable.deserialize(line)
             if is_target_action(action):
                 try:
-                    if action.action_type == ActionType.REPLACE:
+                    if isinstance(action, ReplaceAction):
                         apply_replace(action, query2node)
-                    elif action.action_type == ActionType.ADD_AFTER:
+                    elif isinstance(action, AddAfterAction):
                         apply_add_after(action, query2node)
-                    elif action.action_type == ActionType.DELETE:
+                    elif isinstance(action, DeleteAction):
                         apply_delete(action, query2node)
                 except Exception as e:
                     LOGGER.debug(e)

@@ -1,24 +1,22 @@
 from unittest import TestCase
 
 from lawhub.law import LawHierarchy
-from lawhub.query import QueryType, Query, QueryCompensator
+from lawhub.query import Query, QueryCompensator
 
 
 class TestQuery(TestCase):
     def test_init_at_hierarchy(self):
         text = '第一条第二項第三号'
-        query = Query(text)
+        query = Query.from_text(text)
 
-        self.assertEqual(QueryType.AT_HIERARCHY, query.query_type)
         self.assertEqual('第一条', query.get(LawHierarchy.ARTICLE))
         self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
         self.assertEqual('第三号', query.get(LawHierarchy.ITEM))
 
     def test_init_after_hierarchy(self):
         text = '第一条第二項第三号の次'
-        query = Query(text)
+        query = Query.from_text(text)
 
-        self.assertEqual(QueryType.AFTER_HIERARCHY, query.query_type)
         self.assertEqual('第一条', query.get(LawHierarchy.ARTICLE))
         self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
         self.assertEqual('第三号', query.get(LawHierarchy.ITEM))

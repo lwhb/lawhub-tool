@@ -2,13 +2,15 @@ import xml.etree.ElementTree as ET
 from unittest import TestCase
 
 from lawhub.law import extract_law_hierarchy, LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item, build_law_tree
+from lawhub.serializable import is_serializable
 
 
 class TestLaw(TestCase):
     def test_parse_xml(self):
         fp = './resource/law.xml'
         for node in ET.parse(fp).getroot():
-            parse_xml(node)
+            tree = parse_xml(node)
+            self.assertTrue(is_serializable(tree))
 
     def test_sort_law_tree(self):
         articles = [Article(number='2'), Article(number='3'), Article(number='1')]
@@ -36,6 +38,7 @@ class TestLaw(TestCase):
         self.assertEqual('第一章　総則', chapter.title)
         self.assertEqual(0, len(chapter.children))
         self.assertEqual('第一章　総則\n', str(chapter))
+        self.assertTrue(is_serializable(chapter))
 
     def test_article(self):
         fp = './resource/article.xml'
@@ -46,6 +49,7 @@ class TestLaw(TestCase):
         self.assertEqual('7_2', article.number)
         self.assertEqual(0, len(article.children))
         self.assertEqual('（登記簿等の持出禁止）\n第七条の二\n', str(article))
+        self.assertTrue(is_serializable(article))
 
     def test_article_order(self):
         self.assertTrue(Article(number='2') < Article(number='10'))
@@ -61,6 +65,7 @@ class TestLaw(TestCase):
         self.assertEqual('第一項', paragraph.title)
         self.assertEqual('本文ただし書', paragraph.sentence)
         self.assertEqual(0, len(paragraph.children))
+        self.assertTrue(is_serializable(paragraph))
 
     def test_item(self):
         fp = './resource/item.xml'
@@ -69,6 +74,7 @@ class TestLaw(TestCase):
         self.assertEqual('ほどほどに頑張ること。', item.sentence)
         self.assertEqual(0, len(item.children))
         self.assertEqual(INDENT + '一' + SPACE + 'ほどほどに頑張ること。', str(item))
+        self.assertTrue(is_serializable(item))
 
     def test_build_law_tree(self):
         fp = './resource/law.txt'
