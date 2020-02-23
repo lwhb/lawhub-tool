@@ -1,5 +1,8 @@
+from logging import getLogger
+
 import MeCab
 
+LOGGER = getLogger(__name__)
 WAKATI = MeCab.Tagger("-Owakati")
 CHASEN = MeCab.Tagger("-Ochasen")
 
@@ -14,6 +17,8 @@ def parse_by_chasen(sentence):
 
 
 def normalize_last_verb(sentence):
+    if not sentence:
+        return sentence
     result = parse_by_chasen(sentence)
     ret = ''.join(map(lambda row: row[0], result[:-1]))
     if result[-1][3].startswith('動詞'):

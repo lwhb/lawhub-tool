@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 from logging import getLogger
 
-from lawhub.constants import NUMBER_KANJI, IROHA, NUMBER_ROMAN
+from lawhub.constants import NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA
 from lawhub.kanzize import int2kanji
 from lawhub.serializable import Serializable
 
@@ -27,6 +27,7 @@ class LawHierarchy(str, Enum):
     ITEM = '号'
     SUBITEM1 = 'イ'
     SUBITEM2 = '（１）'
+    SUBITEM3 = '（ｉ）'
 
 
 def extract_law_hierarchy(string, hrchy):
@@ -38,7 +39,9 @@ def extract_law_hierarchy(string, hrchy):
     elif hrchy == LawHierarchy.SUBITEM1:
         pattern = r'[{0}]'.format(IROHA)
     elif hrchy == LawHierarchy.SUBITEM2:
-        pattern = r'（[{0}]）'.format(NUMBER_ROMAN)
+        pattern = r'（[{0}]+）'.format(NUMBER_SUJI)
+    elif hrchy == LawHierarchy.SUBITEM3:
+        pattern = r'（[{0}]+）'.format(NUMBER_ROMAN)
     else:
         pattern = r'第[{0}]+{1}|同{1}'.format(NUMBER_KANJI, hrchy.value)
 
@@ -84,6 +87,8 @@ def parse_xml(node):
         return Subitem1.from_xml(node)
     elif node.tag == 'Subitem2':
         return Subitem2.from_xml(node)
+    elif node.tag == 'Subitem3':
+        return Subitem3.from_xml(node)
     elif node.tag == 'TableStruct':
         return BaseLawClass(title='<表略>')
     elif node.tag == 'List':
@@ -342,6 +347,23 @@ class Subitem2(BaseItemClass):
         return INDENT * 3 + super().__str__()
 
 
+class Subitem3(BaseItemClass):
+    hierarchy = LawHierarchy.SUBITEM3
+
+    def __init__(self, title=None, sentence=None, children=None):
+        super().__init__(title, sentence, children)
+
+    @classmethod
+    def from_xml(cls, node):
+        assert node.tag == 'Subitem3'
+        assert node[0].tag == 'Subitem3Title'
+        assert node[1].tag == 'Subitem3Sentence'
+        return super().from_xml(node)
+
+    def __str__(self):
+        return INDENT * 4 + super().__str__()
+
+
 class LawTreeBuilder:
     """
     Build LawTree bottom-up
@@ -402,10 +424,11 @@ def title_to_hierarchy(text):
         LawHierarchy.SUBSECTION: r'第[{0}]+款'.format(NUMBER_KANJI),
         LawHierarchy.DIVISION: r'第[{0}]+目'.format(NUMBER_KANJI),
         LawHierarchy.ARTICLE: r'第[{0}]+条(の[{0}]+)*'.format(NUMBER_KANJI),
-        LawHierarchy.PARAGRAPH: r'[{0}]+|[{1}]+'.format(NUMBER_ROMAN, '0-9'),
+        LawHierarchy.PARAGRAPH: r'[{0}]+|[{1}]+'.format(NUMBER_SUJI, '0-9'),
         LawHierarchy.ITEM: r'[{0}]+'.format(NUMBER_KANJI),
         LawHierarchy.SUBITEM1: r'[{0}]'.format(IROHA),
-        LawHierarchy.SUBITEM2: r'（[{0}]+）'.format(NUMBER_ROMAN)
+        LawHierarchy.SUBITEM2: r'（[{0}]+）'.format(NUMBER_SUJI),
+        LawHierarchy.SUBITEM3: r'（[{0}]+）'.format(NUMBER_ROMAN)
     }
     for hrchy, pattern in hrchy2pattern.items():
         m = re.fullmatch(pattern, text)
@@ -415,6 +438,8 @@ def title_to_hierarchy(text):
 
 
 def line_to_node(text):
+    if not text:
+        return None
     chunks = text.strip().split()
     maybe_title = chunks[0]
     maybe_sentence = ' '.join(chunks[1:])
@@ -439,6 +464,8 @@ def line_to_node(text):
         return Subitem1(title=maybe_title, sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.SUBITEM2:
         return Subitem2(title=maybe_title, sentence=maybe_sentence)
+    elif maybe_hrchy == LawHierarchy.SUBITEM3:
+        return Subitem3(title=maybe_title, sentence=maybe_sentence)
     return None
 
 

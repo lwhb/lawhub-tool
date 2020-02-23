@@ -12,6 +12,10 @@ class TestNlp(TestCase):
         sentence = 'この場合において'
         self.assertEqual(sentence, normalize_last_verb(sentence))
 
+    def test_normalize_last_verb_empty(self):
+        sentence = ''
+        self.assertEqual(sentence, normalize_last_verb(sentence))
+
     def test_split_with_escape(self):
         sentence = 'この関数は「かっこ（「」）で、囲まれていると」切らない、らしい。'
         self.assertEqual(['この関数は「かっこ（「」）で、囲まれていると」切らない', 'らしい'], split_with_escape(sentence))
