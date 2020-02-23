@@ -100,7 +100,7 @@ def main(in_fp, stat_fp):
                 else:
                     actions, pc, sc = parse_actions(line, {'line': line_count})
                     for action in actions:  # output actions even if partial success (ISSUE14)
-                        f.write(json.dumps(action.to_dict(), ensure_ascii=False) + '\n')
+                        f.write(action.serialize() + '\n')
                     process_count += pc
                     success_count += sc
                 line_count += 1

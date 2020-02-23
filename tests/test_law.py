@@ -92,8 +92,7 @@ class TestLaw(TestCase):
 
     def test_law_tree_biulder(self):
         c1 = Chapter(title='第一章')
-        a1 = Article(title='第一条')
-        p11 = Paragraph(title='第一条第一項')
+        a1 = Article(title='第一条', children=[Paragraph(title='第一条第一項')])
         p12 = Paragraph(title='第一条第二項')
         a2 = Article(title='第二条')
         p21 = Paragraph(title='第二条第一項')
@@ -102,7 +101,6 @@ class TestLaw(TestCase):
         law_tree_builder.add(p21)
         law_tree_builder.add(a2)
         law_tree_builder.add(p12)
-        law_tree_builder.add(p11)
         law_tree_builder.add(a1)
         law_tree_builder.add(c1)
         tree = law_tree_builder.build()

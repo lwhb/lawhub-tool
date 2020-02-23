@@ -381,7 +381,7 @@ class LawTreeBuilder:
             msg = 'failed to add new node as there are active child nodes at multiple hierarchy'
             raise ValueError(msg) from e
         if children:
-            node.children = children
+            node.children += children
         self.hrchy2nodes[node.hierarchy].append(node)
 
     def build(self):
@@ -411,8 +411,7 @@ class LawTreeBuilder:
         else:
             msg = 'found multiple child hierarchy under {0} ({1})'.format(
                 parent_hrchy.value,
-                ','.join(map(lambda x: x.value, child_hrchy_list))
-            )
+                ','.join(map(lambda x: x.value, child_hrchy_list)))
             raise ValueError(msg)
 
 
@@ -425,9 +424,9 @@ def title_to_hierarchy(text):
         LawHierarchy.DIVISION: r'第[{0}]+目'.format(NUMBER_KANJI),
         LawHierarchy.ARTICLE: r'第[{0}]+条(の[{0}]+)*'.format(NUMBER_KANJI),
         LawHierarchy.PARAGRAPH: r'[{0}]+|[{1}]+'.format(NUMBER_SUJI, '0-9'),
-        LawHierarchy.ITEM: r'[{0}]+'.format(NUMBER_KANJI),
+        LawHierarchy.ITEM: r'[{0}]+(の[{0}]+)*'.format(NUMBER_KANJI),
         LawHierarchy.SUBITEM1: r'[{0}]'.format(IROHA),
-        LawHierarchy.SUBITEM2: r'（[{0}]+）'.format(NUMBER_SUJI),
+        LawHierarchy.SUBITEM2: r'（[{0}]+）|\([0-9]+\)'.format(NUMBER_SUJI),
         LawHierarchy.SUBITEM3: r'（[{0}]+）'.format(NUMBER_ROMAN)
     }
     for hrchy, pattern in hrchy2pattern.items():
@@ -455,7 +454,10 @@ def line_to_node(text):
     elif maybe_hrchy == LawHierarchy.DIVISION:
         return Division(title=maybe_title)
     elif maybe_hrchy == LawHierarchy.ARTICLE:
-        return Article(title=maybe_title)
+        children = []
+        if maybe_sentence:
+            children.append(Paragraph(title='第一項', number=1, sentence=maybe_sentence))
+        return Article(title=maybe_title, children=children)
     elif maybe_hrchy == LawHierarchy.PARAGRAPH:
         return Paragraph(number=int(maybe_title), sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.ITEM:
@@ -482,16 +484,10 @@ def build_law_tree(text):
             LOGGER.warning(f'failed to process {line} @ {idx + 2}')  # +2 for 1-origin
             continue
         if maybe_node.hierarchy == LawHierarchy.ARTICLE:
-            # set paragraph in the line if exists
-            chunks = line.strip().split()
-            if len(chunks) > 1:
-                paragraph = Paragraph(title='第一項', number=1, sentence=' '.join(chunks[1:]))
-                law_tree_builder.add(paragraph)
-
             # set caption in the previous line if exists
-            m = re.fullmatch(r'（.+）', lines[idx].strip())
-            if m:
-                maybe_node.caption = m.group()
+            match = re.fullmatch(r'（.+）', lines[idx].strip())
+            if match:
+                maybe_node.caption = match.group()
                 idx -= 1
         law_tree_builder.add(maybe_node)
 
