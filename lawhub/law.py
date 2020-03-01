@@ -34,14 +34,19 @@ def extract_law_hierarchy(string, hrchy):
     if hrchy not in LawHierarchy:
         msg = f'invalid law division: {hrchy}'
         raise ValueError(msg)
-    elif hrchy == LawHierarchy.ARTICLE:
-        pattern = r'第[{0}]+条(の[{0}]+)*|同条'.format(NUMBER_KANJI)
+    elif hrchy in [LawHierarchy.PART,
+                   LawHierarchy.CHAPTER,
+                   LawHierarchy.SECTION,
+                   LawHierarchy.SUBSECTION,
+                   LawHierarchy.DIVISION,
+                   LawHierarchy.ARTICLE]:
+        pattern = r'第[{0}]+{1}(の[{0}]+)*|同{1}'.format(NUMBER_KANJI, hrchy.value)
     elif hrchy == LawHierarchy.SUBITEM1:
         pattern = r'[{0}]'.format(IROHA)
     elif hrchy == LawHierarchy.SUBITEM2:
-        pattern = r'（[{0}]+）'.format(NUMBER_SUJI)
+        pattern = r'（[{0}]+）|\([{1}]+\)'.format(NUMBER_SUJI, '0-9')
     elif hrchy == LawHierarchy.SUBITEM3:
-        pattern = r'（[{0}]+）'.format(NUMBER_ROMAN)
+        pattern = r'（[{0}]+）|\([{0}]+\)'.format(NUMBER_ROMAN)
     else:
         pattern = r'第[{0}]+{1}|同{1}'.format(NUMBER_KANJI, hrchy.value)
 
@@ -242,6 +247,8 @@ class Paragraph(BaseLawClass):
     hierarchy = LawHierarchy.PARAGRAPH
 
     def __init__(self, title=None, number=None, sentence=None, children=None):
+        if (not title) and number:
+            title = '第{}項'.format(int2kanji(int(number)))
         super().__init__(title, children)
         self.number = number if number else 1
         self.sentence = sentence if sentence else ''
@@ -253,10 +260,9 @@ class Paragraph(BaseLawClass):
         assert node[1].tag == 'ParagraphSentence'
         assert 'Num' in node.attrib
         number = int(node.attrib['Num'])
-        title = '第{}項'.format(int2kanji(int(number)))
         sentence = ''.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
         children = [parse_xml(child) for child in node[2:]]
-        return cls(title=title, number=number, sentence=sentence, children=children)
+        return cls(number=number, sentence=sentence, children=children)
 
     def __str__(self):
         body = str(self.number) + SPACE + self.sentence
@@ -376,6 +382,8 @@ class LawTreeBuilder:
 
     def add(self, node):
         try:
+            while node.children:
+                self.add(node.children.pop())
             children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
         except ValueError as e:
             msg = 'failed to add new node as there are active child nodes at multiple hierarchy'
@@ -410,25 +418,27 @@ class LawTreeBuilder:
             return children
         else:
             msg = 'found multiple child hierarchy under {0} ({1})'.format(
-                parent_hrchy.value,
+                parent_hrchy.value if parent_hrchy else 'root',
                 ','.join(map(lambda x: x.value, child_hrchy_list)))
             raise ValueError(msg)
 
 
 def title_to_hierarchy(text):
     hrchy2pattern = {
-        LawHierarchy.PART: r'第[{0}]+編'.format(NUMBER_KANJI),
-        LawHierarchy.CHAPTER: r'第[{0}]+章'.format(NUMBER_KANJI),
-        LawHierarchy.SECTION: r'第[{0}]+節'.format(NUMBER_KANJI),
-        LawHierarchy.SUBSECTION: r'第[{0}]+款'.format(NUMBER_KANJI),
-        LawHierarchy.DIVISION: r'第[{0}]+目'.format(NUMBER_KANJI),
-        LawHierarchy.ARTICLE: r'第[{0}]+条(の[{0}]+)*'.format(NUMBER_KANJI),
         LawHierarchy.PARAGRAPH: r'[{0}]+|[{1}]+'.format(NUMBER_SUJI, '0-9'),
         LawHierarchy.ITEM: r'[{0}]+(の[{0}]+)*'.format(NUMBER_KANJI),
         LawHierarchy.SUBITEM1: r'[{0}]'.format(IROHA),
-        LawHierarchy.SUBITEM2: r'（[{0}]+）|\([0-9]+\)'.format(NUMBER_SUJI),
-        LawHierarchy.SUBITEM3: r'（[{0}]+）'.format(NUMBER_ROMAN)
+        LawHierarchy.SUBITEM2: r'（[{0}]+）|\([{1}]+\)'.format(NUMBER_SUJI, '0-9'),
+        LawHierarchy.SUBITEM3: r'（[{0}]+）|\([{0}]+\)'.format(NUMBER_ROMAN)
     }
+    for hrchy in [LawHierarchy.PART,
+                  LawHierarchy.CHAPTER,
+                  LawHierarchy.SECTION,
+                  LawHierarchy.SUBSECTION,
+                  LawHierarchy.DIVISION,
+                  LawHierarchy.ARTICLE]:
+        hrchy2pattern[hrchy] = r'第[{0}]+{1}(の[{0}]+)*'.format(NUMBER_KANJI, hrchy.value)
+
     for hrchy, pattern in hrchy2pattern.items():
         m = re.fullmatch(pattern, text)
         if m:
@@ -436,7 +446,7 @@ def title_to_hierarchy(text):
     return None
 
 
-def line_to_node(text):
+def line_to_law_node(text):
     if not text:
         return None
     chunks = text.strip().split()
@@ -469,26 +479,3 @@ def line_to_node(text):
     elif maybe_hrchy == LawHierarchy.SUBITEM3:
         return Subitem3(title=maybe_title, sentence=maybe_sentence)
     return None
-
-
-def build_law_tree(text):
-    lines = [line for line in text.split('\n') if line.strip() != '']
-    law_tree_builder = LawTreeBuilder()
-
-    idx = len(lines) - 1
-    while idx >= 0:
-        line = lines[idx]
-        idx -= 1
-        maybe_node = line_to_node(line)
-        if maybe_node is None:
-            LOGGER.warning(f'failed to process {line} @ {idx + 2}')  # +2 for 1-origin
-            continue
-        if maybe_node.hierarchy == LawHierarchy.ARTICLE:
-            # set caption in the previous line if exists
-            match = re.fullmatch(r'（.+）', lines[idx].strip())
-            if match:
-                maybe_node.caption = match.group()
-                idx -= 1
-        law_tree_builder.add(maybe_node)
-
-    return law_tree_builder.build()

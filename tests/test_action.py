@@ -14,7 +14,6 @@ class TestAction(TestCase):
         self.assertEqual(Query.from_text('第二条'), action.at)
         self.assertEqual('次の二項', action.what)
         self.assertTrue(is_serializable(action))
-        print(action.serialize())
 
     def test_add_after_action(self):
         text = '第二条中「前項」の下に「について」を加え'
