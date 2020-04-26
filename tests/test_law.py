@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 from unittest import TestCase
 
-from lawhub.law import LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item
+from lawhub.law import LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item, line_to_law_node
 from lawhub.serializable import is_serializable
 
 
@@ -38,6 +38,12 @@ class TestLaw(TestCase):
         self.assertEqual('第一項', LawHierarchy.PARAGRAPH.extract(string))
         self.assertEqual('第一項', LawHierarchy.PARAGRAPH.extract(string, allow_placeholder=False))
         self.assertEqual('', LawHierarchy.PARAGRAPH.extract(string, allow_partial_match=False))
+
+    def test_get_child_hierarchy_list(self):
+        self.assertEqual(
+            [LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2, LawHierarchy.SUBITEM3],
+            LawHierarchy.PARAGRAPH.get_children()
+        )
 
     def test_chapter(self):
         fp = './resource/chapter.xml'
@@ -87,6 +93,7 @@ class TestLaw(TestCase):
     def test_law_tree_biulder(self):
         input_nodes = [
             Chapter(title='第一章'),
+            Article(caption='テスト'),
             Article(title='第一条', children=[Paragraph(title='第一条第一項')]),
             Item(title='一'),
             Item(title='二'),
@@ -106,6 +113,7 @@ class TestLaw(TestCase):
         self.assertEqual(2, len(chapter.children))
         article1 = chapter.children[0]
         self.assertEqual('第一条', article1.title)
+        self.assertEqual('テスト', article1.caption)
         self.assertEqual(2, len(article1.children))
         paragraph1 = article1.children[0]
         self.assertEqual('第一条第一項', paragraph1.title)
@@ -121,6 +129,7 @@ class TestLaw(TestCase):
         self.assertEqual(0, len(paragraph2.children))
         article2 = chapter.children[1]
         self.assertEqual('第二条', article2.title)
+        self.assertEqual('', article2.caption)
         self.assertEqual(1, len(article2.children))
         paragraph3 = article2.children[0]
         self.assertEqual('第二条第一項', paragraph3.title)
@@ -139,3 +148,17 @@ class TestLaw(TestCase):
         law_tree_builder.add(item)
         with self.assertRaises(ValueError):
             law_tree_builder.add(article)  # failed to add as multiple children exists at different hierarchy
+
+    def test_line_to_law_node(self):
+        self.assertEqual(
+            Article(title='第一条', children=Paragraph(title='第一項', number=1, sentence='これは第一項です。')),
+            line_to_law_node('第一条　これは第一項です。')
+        )
+        self.assertEqual(
+            Paragraph(number=2, sentence='これは第二項です。'),
+            line_to_law_node('２　これは第二項です。')
+        )
+        self.assertEqual(
+            Article(caption='テスト'),
+            line_to_law_node('（テスト）')
+        )

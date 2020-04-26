@@ -14,7 +14,7 @@ INDENT = SPACE * 4
 
 class LawHierarchy(Enum):
     """
-    e-gov法令APIのXMLにおける階層名の一覧
+    e-gov法令APIのXMLにおける階層名の一覧（階層順）
     """
 
     PART = '編'
@@ -55,6 +55,17 @@ class LawHierarchy(Enum):
             return m.group()
         else:
             return ''
+
+    def get_children(self):
+        flag = False
+        children = []
+        for hrchy in LawHierarchy:
+            if flag:
+                children.append(hrchy)
+            else:
+                if hrchy == self:
+                    flag = True
+        return children
 
 
 def extract_text_from_sentence(node):
@@ -381,15 +392,20 @@ class LawTreeBuilder:
             self.hrchy2nodes[hrchy] = list()
 
     def add(self, node):
+        # special case to merge ArticleCaption
+        if isinstance(node, Article) and node.title == '' and node.caption != '':
+            if not (self.hrchy2nodes[LawHierarchy.ARTICLE]):
+                raise ValueError("ArticleCaption can not be added without previous Article")
+            self.hrchy2nodes[LawHierarchy.ARTICLE][-1].caption = node.caption
+            return
+
+        while node.children:
+            self.add(node.children.pop())
         try:
-            while node.children:
-                self.add(node.children.pop())
-            children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
+            node.children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
         except ValueError as e:
             msg = 'failed to add new node as there are active child nodes at multiple hierarchy'
             raise ValueError(msg) from e
-        if children:
-            node.children += children
         self.hrchy2nodes[node.hierarchy].append(node)
 
     def build(self):
@@ -400,30 +416,31 @@ class LawTreeBuilder:
             raise ValueError(msg) from e
 
     def _get_children(self, parent_hrchy, flush):
-        child_hrchy_list = list()
-        flag = True if parent_hrchy is None else False
-        for hrchy in LawHierarchy:
-            if hrchy == parent_hrchy:
-                flag = True
-            elif flag and self.hrchy2nodes[hrchy]:
-                child_hrchy_list.append(hrchy)
+        child_hrchy_list = parent_hrchy.get_children() if parent_hrchy is not None else LawHierarchy
+        active_child_hrchy_list = []
+        for hrchy in child_hrchy_list:
+            if self.hrchy2nodes[hrchy]:
+                active_child_hrchy_list.append(hrchy)
 
-        if len(child_hrchy_list) == 0:
+        if len(active_child_hrchy_list) == 0:
             return list()
-        elif len(child_hrchy_list) == 1:
-            child_hrchy = child_hrchy_list[0]
-            children = self.hrchy2nodes[child_hrchy][::-1]
+        elif len(active_child_hrchy_list) == 1:
+            hrchy = active_child_hrchy_list[0]
+            children = self.hrchy2nodes[hrchy][::-1]
             if flush:
-                self.hrchy2nodes[child_hrchy] = list()
+                self.hrchy2nodes[hrchy] = list()
             return children
         else:
-            msg = 'found multiple child hierarchy under {0} ({1})'.format(
+            msg = 'found multiple active child hierarchy under {0} ({1})'.format(
                 parent_hrchy.value if parent_hrchy else 'root',
-                ','.join(map(lambda x: x.value, child_hrchy_list)))
+                ','.join(map(lambda x: x.value, active_child_hrchy_list)))
             raise ValueError(msg)
 
 
 def title_to_hierarchy(text):
+    # special case for Paragraph
+    if text.isdigit():
+        return LawHierarchy.PARAGRAPH
     for hrchy in LawHierarchy:
         if hrchy.extract(text, allow_placeholder=False, allow_partial_match=False):
             return hrchy
