@@ -2,7 +2,7 @@ import copy
 from enum import Enum
 from logging import getLogger
 
-from lawhub.law import LawHierarchy, extract_law_hierarchy
+from lawhub.law import LawHierarchy
 from lawhub.serializable import Serializable
 
 LOGGER = getLogger(__name__)
@@ -29,7 +29,7 @@ class Query(Serializable):
         else:
             self.hierarchy = dict()
             for hrchy in Query.law_hierarchy_lst:
-                self.set(hrchy, extract_law_hierarchy(text, hrchy))  # default ''
+                self.set(hrchy, hrchy.extract(text))  # default ''
 
     @classmethod
     def from_text(cls, text):

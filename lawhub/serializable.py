@@ -3,6 +3,9 @@ Serializable class from Effective Python (section 26 and 34)
 """
 
 import json
+from logging import getLogger
+
+LOGGER = getLogger(__name__)
 
 
 class ToDictMixin(object):
@@ -54,11 +57,16 @@ class Serializable(ToDictMixin, metaclass=Registry):
     @classmethod
     def from_dict(cls, params):
         if isinstance(params, dict) and '__class__' in params and '__dict__' in params:
+            if params['__class__'] not in Registry.registry:
+                LOGGER.warning('Unsupported Serializable class found: ' + params['__class__'])
+                return params
             target_class = Registry.registry[params['__class__']]
             kwargs = {}
             for key, val in params['__dict__'].items():
                 kwargs[key] = cls.from_dict(val)
             return target_class(**kwargs)
+        if isinstance(params, list):
+            return [cls.from_dict(v) for v in params]
         else:
             return params
 

@@ -1,35 +1,35 @@
 from unittest import TestCase
 
-from lawhub.action import parse_action_text, AddAction, AddAfterAction, DeleteAction, ReplaceAction, RenameAction
+from lawhub.action import parse_action_text, AddLawAction, AddWordAction, DeleteAction, ReplaceAction, RenameAction
 from lawhub.query import Query
 from lawhub.serializable import is_serializable
 
 
 class TestAction(TestCase):
-    def test_add_action(self):
+    def test_add_law_action(self):
         text = '第二条に次の二項を加え'
         action = parse_action_text(text)
 
-        self.assertTrue(isinstance(action, AddAction))
+        self.assertTrue(isinstance(action, AddLawAction))
         self.assertEqual(Query.from_text('第二条'), action.at)
-        self.assertEqual('次の二項', action.what)
+        self.assertEqual('二項', action.what)
         self.assertTrue(is_serializable(action))
 
-    def test_add_after_action(self):
+    def test_add_word_action(self):
         text = '第二条中「前項」の下に「について」を加え'
         action = parse_action_text(text)
 
-        self.assertTrue(isinstance(action, AddAfterAction))
+        self.assertTrue(isinstance(action, AddWordAction))
         self.assertEqual(Query.from_text('第二条'), action.at)
         self.assertEqual('前項', action.word)
         self.assertEqual('について', action.what)
         self.assertTrue(is_serializable(action))
 
-    def test_add_after_action_short(self):
+    def test_add_word_action_short(self):
         text = '「前項」の下に「について」を'
         action = parse_action_text(text)
 
-        self.assertTrue(isinstance(action, AddAfterAction))
+        self.assertTrue(isinstance(action, AddWordAction))
         self.assertEqual(Query.from_text(''), action.at)
         self.assertEqual('前項', action.word)
         self.assertEqual('について', action.what)

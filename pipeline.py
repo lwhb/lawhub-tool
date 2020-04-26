@@ -177,6 +177,7 @@ if __name__ == '__main__':
                         default=['parse', 'law', 'apply', 'viz', 'report'],
                         choices=['parse', 'law', 'apply', 'viz', 'report'])
     parser.add_argument('-v', '--verbose', action='store_true')
+    # ToDo pass verbose option to tasks
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,

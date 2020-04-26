@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 from unittest import TestCase
 
-from lawhub.law import extract_law_hierarchy, LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item
+from lawhub.law import LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item
 from lawhub.serializable import is_serializable
 
 
@@ -25,11 +25,19 @@ class TestLaw(TestCase):
 
     def test_extract_law_hierarchy(self):
         string = '第七十五条の二の二第五項第三号イ（２）'
-        self.assertEqual('第七十五条の二の二', extract_law_hierarchy(string, LawHierarchy.ARTICLE))
-        self.assertEqual('第五項', extract_law_hierarchy(string, LawHierarchy.PARAGRAPH))
-        self.assertEqual('第三号', extract_law_hierarchy(string, LawHierarchy.ITEM))
-        self.assertEqual('イ', extract_law_hierarchy(string, LawHierarchy.SUBITEM1))
-        self.assertEqual('（２）', extract_law_hierarchy(string, LawHierarchy.SUBITEM2))
+        self.assertEqual('第七十五条の二の二', LawHierarchy.ARTICLE.extract(string))
+        self.assertEqual('第五項', LawHierarchy.PARAGRAPH.extract(string))
+        self.assertEqual('第三号', LawHierarchy.ITEM.extract(string))
+        self.assertEqual('イ', LawHierarchy.SUBITEM1.extract(string))
+        self.assertEqual('（２）', LawHierarchy.SUBITEM2.extract(string))
+
+        string = '同条第一項'
+        self.assertEqual('同条', LawHierarchy.ARTICLE.extract(string))
+        self.assertEqual('', LawHierarchy.ARTICLE.extract(string, allow_placeholder=False))
+        self.assertEqual('', LawHierarchy.ARTICLE.extract(string, allow_partial_match=False))
+        self.assertEqual('第一項', LawHierarchy.PARAGRAPH.extract(string))
+        self.assertEqual('第一項', LawHierarchy.PARAGRAPH.extract(string, allow_placeholder=False))
+        self.assertEqual('', LawHierarchy.PARAGRAPH.extract(string, allow_partial_match=False))
 
     def test_chapter(self):
         fp = './resource/chapter.xml'

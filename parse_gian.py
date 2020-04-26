@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 
 from lawhub.parser import GianParser
+from lawhub.util import StatsFactory
 
 LOGGER = logging.getLogger('parse_gian')
 
@@ -16,13 +17,13 @@ def split_to_chunks(lines_and_nodes):
     """
 
     chunks = []
-    chunk = []
-    for obj in lines_and_nodes:
+    prev_idx = 0
+    for idx, obj in enumerate(lines_and_nodes):
         if '次のように改正する' in str(obj):
-            if chunk:
-                chunks.append(chunk)
-                chunk = []
-        chunk.append(obj)
+            if idx - prev_idx:
+                chunks.append(lines_and_nodes[prev_idx:idx])
+            prev_idx = idx
+    chunks.append(lines_and_nodes[prev_idx:])
     return chunks
 
 
@@ -34,9 +35,9 @@ def main(in_fp, stat_fp):
         raise ValueError(msg)
     lines = data['main'].split('\n')
 
-    gian_parser = GianParser()
-    lines_and_nodes = gian_parser.parse(lines)
-    LOGGER.info(f'Parsed {gian_parser.success_count} / {gian_parser.process_count} lines')
+    gian_parser = GianParser(lines)
+    lines_and_nodes = gian_parser.parse()
+    # LOGGER.info(f'Parsed {gian_parser.success_count} / {gian_parser.process_count} lines')
 
     chunks = split_to_chunks(lines_and_nodes)
     LOGGER.info(f'Split to {len(chunks)} chunks')
@@ -51,12 +52,11 @@ def main(in_fp, stat_fp):
                     f.write(obj.serialize() + '\n')
         LOGGER.info(f'Saved {out_fp}')
 
-    # Todo: re-define stats
-    # if stat_fp:
-    # stats_factory = StatsFactory(['file', 'process', 'success'])
-    # stats_factory.add({'file': out_fp, 'process': process_count, 'success': success_count})
-    #     stats_factory.commit(stat_fp)
-    #     LOGGER.info(f'Appended stats to {stat_fp}')
+    if stat_fp:
+        stats_factory = StatsFactory(['file', 'process', 'success'])
+        # stats_factory.add({'file': in_fp, 'process': gian_parser.process_count, 'success': gian_parser.success_count})
+        stats_factory.commit(stat_fp)
+        LOGGER.info(f'Appended stats to {stat_fp}')
 
 
 if __name__ == '__main__':

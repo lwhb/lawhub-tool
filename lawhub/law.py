@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 from logging import getLogger
 
-from lawhub.constants import NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA
+from lawhub.constants import NUMBER, NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA
 from lawhub.kanzize import int2kanji
 from lawhub.serializable import Serializable
 
@@ -12,7 +12,7 @@ SPACE = ' '
 INDENT = SPACE * 4
 
 
-class LawHierarchy(str, Enum):
+class LawHierarchy(Enum):
     """
     e-gov法令APIのXMLにおける階層名の一覧
     """
@@ -29,32 +29,32 @@ class LawHierarchy(str, Enum):
     SUBITEM2 = '（１）'
     SUBITEM3 = '（ｉ）'
 
+    def extract(self, string, allow_placeholder=True, allow_partial_match=True):
+        """
+        文字列から対象の文字列を検出する
 
-def extract_law_hierarchy(string, hrchy):
-    if hrchy not in LawHierarchy:
-        msg = f'invalid law division: {hrchy}'
-        raise ValueError(msg)
-    elif hrchy in [LawHierarchy.PART,
-                   LawHierarchy.CHAPTER,
-                   LawHierarchy.SECTION,
-                   LawHierarchy.SUBSECTION,
-                   LawHierarchy.DIVISION,
-                   LawHierarchy.ARTICLE]:
-        pattern = r'第[{0}]+{1}(の[{0}]+)*|同{1}'.format(NUMBER_KANJI, hrchy.value)
-    elif hrchy == LawHierarchy.SUBITEM1:
-        pattern = r'[{0}]'.format(IROHA)
-    elif hrchy == LawHierarchy.SUBITEM2:
-        pattern = r'（[{0}]+）|\([{1}]+\)'.format(NUMBER_SUJI, '0-9')
-    elif hrchy == LawHierarchy.SUBITEM3:
-        pattern = r'（[{0}]+）|\([{0}]+\)'.format(NUMBER_ROMAN)
-    else:
-        pattern = r'第[{0}]+{1}|同{1}'.format(NUMBER_KANJI, hrchy.value)
+        :param allow_placeholder: '同条'という表現を許可する
+        :param allow_partial_match: 部分一致を許可する
+        """
+        if self == LawHierarchy.SUBITEM1:
+            pattern = r'[{0}]'.format(IROHA)
+        elif self == LawHierarchy.SUBITEM2:
+            pattern = r'\([{0}]+\)|（[{1}]+）'.format(NUMBER, NUMBER_SUJI)
+        elif self == LawHierarchy.SUBITEM3:
+            pattern = r'\([{0}]+\)|（[{0}]+）'.format(NUMBER_ROMAN)
+        else:
+            pattern = r'第[{0}]+{1}(の[{0}]+)*'.format(NUMBER_KANJI, self.value)
+            if allow_placeholder:
+                pattern += '|同{0}'.format(self.value)
 
-    m = re.search(pattern, string)
-    if m:
-        return m.group()
-    else:
-        return ''
+        if allow_partial_match:
+            m = re.search(pattern, string)
+        else:
+            m = re.fullmatch(pattern, string)
+        if m:
+            return m.group()
+        else:
+            return ''
 
 
 def extract_text_from_sentence(node):
@@ -424,24 +424,8 @@ class LawTreeBuilder:
 
 
 def title_to_hierarchy(text):
-    hrchy2pattern = {
-        LawHierarchy.PARAGRAPH: r'[{0}]+|[{1}]+'.format(NUMBER_SUJI, '0-9'),
-        LawHierarchy.ITEM: r'[{0}]+(の[{0}]+)*'.format(NUMBER_KANJI),
-        LawHierarchy.SUBITEM1: r'[{0}]'.format(IROHA),
-        LawHierarchy.SUBITEM2: r'（[{0}]+）|\([{1}]+\)'.format(NUMBER_SUJI, '0-9'),
-        LawHierarchy.SUBITEM3: r'（[{0}]+）|\([{0}]+\)'.format(NUMBER_ROMAN)
-    }
-    for hrchy in [LawHierarchy.PART,
-                  LawHierarchy.CHAPTER,
-                  LawHierarchy.SECTION,
-                  LawHierarchy.SUBSECTION,
-                  LawHierarchy.DIVISION,
-                  LawHierarchy.ARTICLE]:
-        hrchy2pattern[hrchy] = r'第[{0}]+{1}(の[{0}]+)*'.format(NUMBER_KANJI, hrchy.value)
-
-    for hrchy, pattern in hrchy2pattern.items():
-        m = re.fullmatch(pattern, text)
-        if m:
+    for hrchy in LawHierarchy:
+        if hrchy.extract(text, allow_placeholder=False, allow_partial_match=False):
             return hrchy
     return None
 
@@ -478,4 +462,9 @@ def line_to_law_node(text):
         return Subitem2(title=maybe_title, sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.SUBITEM3:
         return Subitem3(title=maybe_title, sentence=maybe_sentence)
+
+    # special case for ArticleCaption
+    match = re.fullmatch(r'（.+）', text)
+    if match:
+        return Article(caption=match.group())
     return None

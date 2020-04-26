@@ -30,7 +30,7 @@ def line_to_action_nodes(line, meta=None):
         process_count += 1
         try:
             action = parse_action_text(text, meta)
-            if isinstance(action, (AddAfterAction, AddAction, DeleteAction, ReplaceAction)):
+            if isinstance(action, (AddWordAction, AddLawAction, DeleteAction, ReplaceAction)):
                 action.at = qc.compensate(action.at)
             elif isinstance(action, RenameAction):
                 action.old = qc.compensate(action.old)
@@ -44,8 +44,8 @@ def line_to_action_nodes(line, meta=None):
 
 
 def parse_action_text(text, meta=None):
-    for cls in [AddAfterAction,
-                AddAction,  # needs to come after AddAfterAction as AddAction regex includes AddAfterAction
+    for cls in [AddWordAction,
+                AddLawAction,
                 DeleteAction,
                 ReplaceAction,
                 RenameAction]:
@@ -83,7 +83,7 @@ class AbstractAction(Serializable):
         raise NotImplemented
 
 
-class AddAfterAction(AbstractAction):
+class AddWordAction(AbstractAction):
     pattern = r'(?:(.*)中)?「(.*)」の下に「(.*)」を(加える)?'
 
     def __init__(self, text, meta, at, word, what):
@@ -102,13 +102,14 @@ class AddAfterAction(AbstractAction):
                    what=match.group(3))
 
 
-class AddAction(AbstractAction):
-    pattern = r'(.*)に(.*)を加える'
+class AddLawAction(AbstractAction):
+    pattern = r'(.*)に次の(.*)を加える'
 
-    def __init__(self, text, meta, at, what):
+    def __init__(self, text, meta, at, what, law=None):
         super().__init__(text, meta)
         self.at = at
         self.what = what
+        self.law = law
 
     @classmethod
     def from_text(cls, text, meta=None):
