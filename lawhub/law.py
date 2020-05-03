@@ -67,6 +67,13 @@ class LawHierarchy(Enum):
                     flag = True
         return children
 
+    @classmethod
+    def from_text(cls, text):
+        for hrchy in LawHierarchy:
+            if hrchy.value == text:
+                return hrchy
+        raise ValueError(f'failed to instantiate LawHierarchy from "{text}"')
+
 
 def extract_text_from_sentence(node):
     text = ET.tostring(node, encoding="unicode")
@@ -124,6 +131,8 @@ def sort_law_tree(node):
 
 
 class BaseLawClass(Serializable):
+    hierarchy = None
+
     def __init__(self, title=None, children=None):
         self.title = title if title else ''
         self.children = children if children else list()
@@ -392,6 +401,8 @@ class LawTreeBuilder:
             self.hrchy2nodes[hrchy] = list()
 
     def add(self, node):
+        assert isinstance(node, BaseLawClass)
+
         # special case to merge ArticleCaption
         if isinstance(node, Article) and node.title == '' and node.caption != '':
             if not (self.hrchy2nodes[LawHierarchy.ARTICLE]):
@@ -481,7 +492,7 @@ def line_to_law_node(text):
         return Subitem3(title=maybe_title, sentence=maybe_sentence)
 
     # special case for ArticleCaption
-    match = re.fullmatch(r'（.+）', text)
+    match = re.fullmatch(r'（(.+)）', text)
     if match:
-        return Article(caption=match.group())
+        return Article(caption=match.group(1))
     return None

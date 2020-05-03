@@ -18,7 +18,7 @@ def line_to_action_nodes(line, meta=None):
     :param meta: any metadata in key-value form
     :return:
         1. list of actions, even if partial success
-        2. success flag if whole line is successfully converted to actions
+        2. success/process count metrics
     """
 
     actions = []

@@ -18,7 +18,7 @@ class Query(Serializable):
     法令内の位置を表現するクラス
     """
 
-    law_hierarchy_lst = [LawHierarchy.ARTICLE, LawHierarchy.PARAGRAPH, LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2]
+    target_hierarchies = [LawHierarchy.ARTICLE] + LawHierarchy.ARTICLE.get_children()
 
     def __init__(self, text, hierarchy=None):
         if text is None:
@@ -28,8 +28,10 @@ class Query(Serializable):
             self.hierarchy = hierarchy
         else:
             self.hierarchy = dict()
-            for hrchy in Query.law_hierarchy_lst:
-                self.set(hrchy, hrchy.extract(text))  # default ''
+            for hrchy in Query.target_hierarchies:
+                maybe_hrchy_text = hrchy.extract(text)
+                if maybe_hrchy_text:
+                    self.set(hrchy, hrchy.extract(text))
 
     @classmethod
     def from_text(cls, text):
@@ -38,19 +40,19 @@ class Query(Serializable):
     def __eq__(self, other):
         if not (isinstance(other, Query)):
             return False
-        for hrchy in Query.law_hierarchy_lst:
+        for hrchy in Query.target_hierarchies:
             if self.get(hrchy) != other.get(hrchy):
                 return False
         return True
 
     def __hash__(self):
-        return hash(''.join(map(lambda x: self.get(x), Query.law_hierarchy_lst)))
+        return hash(';'.join(map(lambda x: self.get(x), Query.target_hierarchies)))
 
     def __repr__(self):
-        return '<Query text={0} {1}>'.format(self.text, ';'.join(map(lambda x: self.get(x), Query.law_hierarchy_lst)))
+        return '<Query text={0} {1}>'.format(self.text, ';'.join(map(lambda x: self.get(x), Query.target_hierarchies)))
 
     def get(self, hrchy):
-        return self.hierarchy[hrchy.name]
+        return self.hierarchy[hrchy.name] if hrchy.name in self.hierarchy else ''
 
     def set(self, hrchy, val):
         self.hierarchy[hrchy.name] = val
@@ -64,13 +66,12 @@ class Query(Serializable):
             return len(val) > 0 and val[0] != '同'  # ignore '同条', '同項', '同号'
 
     def clear(self, hrchy):
-        return self.set(hrchy, '')
+        if hrchy.name in self.hierarchy:
+            del self.hierarchy[hrchy.name]
+        return True
 
     def is_empty(self):
-        for val in self.hierarchy.values():
-            if val:
-                return False
-        return True
+        return not self.hierarchy
 
 
 class QueryCompensator:
@@ -98,6 +99,6 @@ class QueryCompensator:
             elif do_compensate and self.context.has(hrchy):
                 query.set(hrchy, self.context.get(hrchy))
         if do_compensate and not (query.has(LawHierarchy.PARAGRAPH)):
-            query.set(LawHierarchy.PARAGRAPH, '第一項')
+            query.set(LawHierarchy.PARAGRAPH, '第一項')  # ToDo: this is not always appropriate for RenameAction
         self.context = copy.deepcopy(query)
         return query

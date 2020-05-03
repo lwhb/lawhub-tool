@@ -12,14 +12,7 @@ class TestQuery(TestCase):
         self.assertEqual('第一条', query.get(LawHierarchy.ARTICLE))
         self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
         self.assertEqual('第三号', query.get(LawHierarchy.ITEM))
-
-    def test_init_after_hierarchy(self):
-        text = '第一条第二項第三号の次'
-        query = Query.from_text(text)
-
-        self.assertEqual('第一条', query.get(LawHierarchy.ARTICLE))
-        self.assertEqual('第二項', query.get(LawHierarchy.PARAGRAPH))
-        self.assertEqual('第三号', query.get(LawHierarchy.ITEM))
+        self.assertEqual('', query.get(LawHierarchy.SUBITEM1))
 
 
 class TestQueryCompensator(TestCase):
