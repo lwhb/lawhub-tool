@@ -162,3 +162,7 @@ class TestLaw(TestCase):
             Article(caption='テスト'),
             line_to_law_node('（テスト）')
         )
+        self.assertEqual(
+            Item(title='三', sentence='これは第三号です。'),
+            line_to_law_node('三　これは第三号です。')
+        )

@@ -55,9 +55,6 @@ class ParseResultEntry:
 
     @staticmethod
     def merge_add_law_action(action_entry, law_entry):
-        assert isinstance(action_entry, ActionParseResultEntry)
-        assert isinstance(law_entry, LawParseResultEntry)
-
         lines = action_entry.lines + law_entry.lines
         idx_start = action_entry.idx_start
         idx_end = law_entry.idx_end
@@ -71,6 +68,10 @@ class ParseResultEntry:
 
     @staticmethod
     def _validate_add_law_action_pair(action_entry, law_entry):
+        if not(isinstance(action_entry, ActionParseResultEntry)):
+            raise ValueError(f'invalid action entry type: {type(action_entry)}')
+        if not(isinstance(law_entry, LawParseResultEntry)):
+            raise ValueError(f'invalid law entry type: {type(law_entry)}')
         if not(action_entry.nodes and isinstance(action_entry.nodes[-1], AddLawAction)):
             raise ValueError('last action node is not AddLawAction')
         what = action_entry.nodes[-1].what

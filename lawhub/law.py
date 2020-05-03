@@ -149,6 +149,9 @@ class BaseLawClass(Serializable):
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.title}>'
 
+    def __eq__(self, other):
+        return isinstance(other, BaseLawClass) and self.title == other.title
+
 
 class BaseSectionClass(BaseLawClass):
     @classmethod
@@ -243,9 +246,7 @@ class Article(BaseLawClass):
         return body + '\n'
 
     def __eq__(self, other):
-        if not isinstance(other, Article):
-            raise NotImplementedError(f'can not compare \"{type(other)}\" with Article')
-        return self.number == other.number
+        return isinstance(other, Article) and self.title == other.title and self.caption == other.caption and self.number == other.number
 
     def __lt__(self, other):
         def clean(number):
@@ -291,9 +292,7 @@ class Paragraph(BaseLawClass):
         return body
 
     def __eq__(self, other):
-        if not isinstance(other, Paragraph):
-            raise NotImplementedError(f'can not compare \"{type(other)}\" with Paragraph')
-        return self.number == other.number
+        return isinstance(other, Paragraph) and self.title == other.title and self.number == other.number and self.sentence == other.sentence
 
     def __lt__(self, other):
         if not isinstance(other, Paragraph):
@@ -318,6 +317,12 @@ class BaseItemClass(BaseLawClass):
         if self.children:
             body += '\n' + self.__str_children__()
         return body
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {self.title} {self.sentence}>'
+
+    def __eq__(self, other):
+        return isinstance(other, BaseItemClass) and self.title == other.title and self.sentence == other.sentence
 
 
 class Item(BaseItemClass):
@@ -452,6 +457,10 @@ def title_to_hierarchy(text):
     # special case for Paragraph
     if text.isdigit():
         return LawHierarchy.PARAGRAPH
+    # special case for Item
+    m = re.fullmatch(r'[{0}]+'.format(NUMBER_KANJI), text)
+    if m:
+        return LawHierarchy.ITEM
     for hrchy in LawHierarchy:
         if hrchy.extract(text, allow_placeholder=False, allow_partial_match=False):
             return hrchy

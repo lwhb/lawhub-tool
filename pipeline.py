@@ -8,15 +8,15 @@ from pathlib import Path
 from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
+# ToDo: make this configurable
 SCRIPT_ROOT = Path('/Users/musui/lawhub/lawhub-tool')
+DATA_ROOT = Path('/Users/musui/lawhub/lawhub-spider/data')
 
 
 class FileFinder:
-    DATA_ROOT = Path('/Users/musui/lawhub/lawhub-spider/data')
-
     @staticmethod
     def _directory(gian_id):
-        return FileFinder.DATA_ROOT / gian_id.replace('-', '/')
+        return DATA_ROOT / gian_id.replace('-', '/')
 
     @staticmethod
     def find_json(gian_id):
@@ -33,30 +33,33 @@ class BashTaskTemplate:
     Template to run bash commands and report command log
     """
 
-    def __init__(self):
+    def __init__(self, verbose=False):
         self.commands = []
         self.results = []
-
-    def __repr__(self):
-        return self.__class__.__name__
+        self.verbose = verbose
 
     def collect(self):
-        pass
+        """
+        collect commands to execute and set to self.commands
+        """
+        raise NotImplementedError
 
     def run(self, collect_command=True, save_log=True):
         if collect_command:
             self.collect()
 
         LOGGER.info('{} started (#cmd:{})'.format(
-            self.__repr__(),
+            self.__class__.__name__,
             len(self.commands))
         )
         for command in tqdm(self.commands):
+            if self.verbose:
+                command += ' -v'
             LOGGER.debug(command)
             result = subprocess.run(command, capture_output=True, shell=True)
             self.results.append(result)
         LOGGER.info('{} finished (success:{} fail:{})'.format(
-            self.__repr__(),
+            self.__class__.__name__,
             sum(map(lambda x: x.returncode == 0, self.results)),
             sum(map(lambda x: x.returncode != 0, self.results))
         ))
@@ -75,8 +78,8 @@ class BashTaskTemplate:
 
 
 class ParseGianTask(BashTaskTemplate):
-    def __init__(self, gian_id_list):
-        super().__init__()
+    def __init__(self, gian_id_list, verbose=False):
+        super().__init__(verbose)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -91,8 +94,8 @@ class ParseGianTask(BashTaskTemplate):
 
 
 class GetLawTask(BashTaskTemplate):
-    def __init__(self, gian_id_list):
-        super().__init__()
+    def __init__(self, gian_id_list, verbose=False):
+        super().__init__(verbose)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -104,8 +107,8 @@ class GetLawTask(BashTaskTemplate):
 
 
 class ApplyGianTask(BashTaskTemplate):
-    def __init__(self, gian_id_list):
-        super().__init__()
+    def __init__(self, gian_id_list, verbose=False):
+        super().__init__(verbose)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -126,8 +129,8 @@ class ApplyGianTask(BashTaskTemplate):
 
 
 class VizGianTask(BashTaskTemplate):
-    def __init__(self, gian_id_list):
-        super().__init__()
+    def __init__(self, gian_id_list, verbose=False):
+        super().__init__(verbose)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -150,25 +153,26 @@ class ReportStatTask(BashTaskTemplate):
 
 
 def main(tasks):
-    LOGGER.info(f'Start pipeline {tasks}')
+    LOGGER.info(f'Start pipeline with {len(tasks)} tasks')
     for task in tasks:
+        LOGGER.info(f'Start {task.__class__.__name__} task')
         task.run()
 
 
 if __name__ == '__main__':
-    def initialize_task(task_name):
+    def initialize_task(task_name, verbose=False):
         if task_name == 'parse':
-            return ParseGianTask(gian_id_list)
+            return ParseGianTask(gian_id_list, verbose)
         elif task_name == 'law':
-            return GetLawTask(gian_id_list)
+            return GetLawTask(gian_id_list, verbose)
         elif task_name == 'apply':
-            return ApplyGianTask(gian_id_list)
+            return ApplyGianTask(gian_id_list, verbose)
         elif task_name == 'viz':
-            return VizGianTask(gian_id_list)
+            return VizGianTask(gian_id_list, verbose)
         elif task_name == 'report':
             return ReportStatTask()
         else:
-            return NotImplemented
+            return NotImplementedError
 
 
     parser = argparse.ArgumentParser(description='指定されたTaskを実行する')
@@ -186,5 +190,5 @@ if __name__ == '__main__':
     )
 
     gian_id_list = [line.strip() for line in open(args.input, 'r') if line.strip()]
-    tasks = list(map(initialize_task, args.task))
+    tasks = list(map(lambda t: initialize_task(t, args.verbose), args.task))
     main(tasks)
