@@ -3,15 +3,49 @@
 """
 
 import re
+from logging import getLogger
 
-from lawhub.nlp import mask_escape, normalize_last_verb
-from lawhub.query import Query
+from lawhub.nlp import mask_escape, normalize_last_verb, split_with_escape
+from lawhub.query import Query, QueryCompensator
 from lawhub.serializable import Serializable
+
+LOGGER = getLogger(__name__)
+
+
+def line_to_action_nodes(line, meta=None):
+    """
+    :param line:
+    :param meta: any metadata in key-value form
+    :return:
+        1. list of actions, even if partial success
+        2. success/process count metrics
+    """
+
+    actions = []
+    process_count = 0
+    success_count = 0
+
+    qc = QueryCompensator()
+    for text in split_with_escape(line.strip()):
+        process_count += 1
+        try:
+            action = parse_action_text(text, meta)
+            if isinstance(action, (AddWordAction, AddLawAction, DeleteAction, ReplaceAction)):
+                action.at = qc.compensate(action.at)
+            elif isinstance(action, RenameAction):
+                action.old = qc.compensate(action.old)
+                action.new = qc.compensate(action.new)
+            actions.append(action)
+            success_count += 1
+        except ValueError as e:
+            LOGGER.debug(e)
+
+    return actions, process_count, success_count
 
 
 def parse_action_text(text, meta=None):
-    for cls in [AddAfterAction,
-                AddAction,  # needs to come after AddAfterAction as AddAction regex includes AddAfterAction
+    for cls in [AddWordAction,
+                AddLawAction,
                 DeleteAction,
                 ReplaceAction,
                 RenameAction]:
@@ -49,7 +83,7 @@ class AbstractAction(Serializable):
         raise NotImplemented
 
 
-class AddAfterAction(AbstractAction):
+class AddWordAction(AbstractAction):
     pattern = r'(?:(.*)中)?「(.*)」の下に「(.*)」を(加える)?'
 
     def __init__(self, text, meta, at, word, what):
@@ -68,13 +102,14 @@ class AddAfterAction(AbstractAction):
                    what=match.group(3))
 
 
-class AddAction(AbstractAction):
-    pattern = r'(.*)に(.*)を加える'
+class AddLawAction(AbstractAction):
+    pattern = r'(.*)に次の(.*)を加える'
 
-    def __init__(self, text, meta, at, what):
+    def __init__(self, text, meta, at, what, law=None):
         super().__init__(text, meta)
         self.at = at
         self.what = what
+        self.law = law
 
     @classmethod
     def from_text(cls, text, meta=None):

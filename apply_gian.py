@@ -6,8 +6,8 @@ import logging
 import sys
 import xml.etree.ElementTree as ET
 
-from lawhub.action import ReplaceAction, AddAfterAction, DeleteAction
-from lawhub.apply import apply_replace, apply_add_after, apply_delete
+from lawhub.action import ReplaceAction, AddWordAction, DeleteAction
+from lawhub.apply import apply_replace, apply_add_word, apply_delete
 from lawhub.law import parse_xml
 from lawhub.query import Query
 from lawhub.serializable import Serializable
@@ -38,7 +38,7 @@ def build_query2node(nodes):
 
 
 def is_target_action(action):
-    return isinstance(action, (ReplaceAction, AddAfterAction, DeleteAction))
+    return isinstance(action, (ReplaceAction, AddWordAction, DeleteAction))
 
 
 def apply_gian(gian_fp, query2node):
@@ -53,8 +53,8 @@ def apply_gian(gian_fp, query2node):
                 try:
                     if isinstance(action, ReplaceAction):
                         apply_replace(action, query2node)
-                    elif isinstance(action, AddAfterAction):
-                        apply_add_after(action, query2node)
+                    elif isinstance(action, AddWordAction):
+                        apply_add_word(action, query2node)
                     elif isinstance(action, DeleteAction):
                         apply_delete(action, query2node)
                 except Exception as e:

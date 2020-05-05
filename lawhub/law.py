@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 from logging import getLogger
 
-from lawhub.constants import NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA
+from lawhub.constants import NUMBER, NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA
 from lawhub.kanzize import int2kanji
 from lawhub.serializable import Serializable
 
@@ -12,9 +12,9 @@ SPACE = ' '
 INDENT = SPACE * 4
 
 
-class LawHierarchy(str, Enum):
+class LawHierarchy(Enum):
     """
-    e-gov法令APIのXMLにおける階層名の一覧
+    e-gov法令APIのXMLにおける階層名の一覧（階層順）
     """
 
     PART = '編'
@@ -29,27 +29,50 @@ class LawHierarchy(str, Enum):
     SUBITEM2 = '（１）'
     SUBITEM3 = '（ｉ）'
 
+    def extract(self, string, allow_placeholder=True, allow_partial_match=True):
+        """
+        文字列から対象の文字列を検出する
 
-def extract_law_hierarchy(string, hrchy):
-    if hrchy not in LawHierarchy:
-        msg = f'invalid law division: {hrchy}'
-        raise ValueError(msg)
-    elif hrchy == LawHierarchy.ARTICLE:
-        pattern = r'第[{0}]+条(の[{0}]+)*|同条'.format(NUMBER_KANJI)
-    elif hrchy == LawHierarchy.SUBITEM1:
-        pattern = r'[{0}]'.format(IROHA)
-    elif hrchy == LawHierarchy.SUBITEM2:
-        pattern = r'（[{0}]+）'.format(NUMBER_SUJI)
-    elif hrchy == LawHierarchy.SUBITEM3:
-        pattern = r'（[{0}]+）'.format(NUMBER_ROMAN)
-    else:
-        pattern = r'第[{0}]+{1}|同{1}'.format(NUMBER_KANJI, hrchy.value)
+        :param allow_placeholder: '同条'という表現を許可する
+        :param allow_partial_match: 部分一致を許可する
+        """
+        if self == LawHierarchy.SUBITEM1:
+            pattern = r'[{0}]'.format(IROHA)
+        elif self == LawHierarchy.SUBITEM2:
+            pattern = r'\([{0}]+\)|（[{1}]+）'.format(NUMBER, NUMBER_SUJI)
+        elif self == LawHierarchy.SUBITEM3:
+            pattern = r'\([{0}]+\)|（[{0}]+）'.format(NUMBER_ROMAN)
+        else:
+            pattern = r'第[{0}]+{1}(の[{0}]+)*'.format(NUMBER_KANJI, self.value)
+            if allow_placeholder:
+                pattern += '|同{0}'.format(self.value)
 
-    m = re.search(pattern, string)
-    if m:
-        return m.group()
-    else:
-        return ''
+        if allow_partial_match:
+            m = re.search(pattern, string)
+        else:
+            m = re.fullmatch(pattern, string)
+        if m:
+            return m.group()
+        else:
+            return ''
+
+    def get_children(self):
+        flag = False
+        children = []
+        for hrchy in LawHierarchy:
+            if flag:
+                children.append(hrchy)
+            else:
+                if hrchy == self:
+                    flag = True
+        return children
+
+    @classmethod
+    def from_text(cls, text):
+        for hrchy in LawHierarchy:
+            if hrchy.value == text:
+                return hrchy
+        raise ValueError(f'failed to instantiate LawHierarchy from "{text}"')
 
 
 def extract_text_from_sentence(node):
@@ -108,6 +131,8 @@ def sort_law_tree(node):
 
 
 class BaseLawClass(Serializable):
+    hierarchy = None
+
     def __init__(self, title=None, children=None):
         self.title = title if title else ''
         self.children = children if children else list()
@@ -123,6 +148,9 @@ class BaseLawClass(Serializable):
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {self.title}>'
+
+    def __eq__(self, other):
+        return isinstance(other, BaseLawClass) and self.title == other.title
 
 
 class BaseSectionClass(BaseLawClass):
@@ -194,6 +222,9 @@ class Article(BaseLawClass):
         self.caption = caption if caption else ''
         self.number = number if number else '1'
 
+    def is_caption_only(self):
+        return self.title == '' and self.caption != ''
+
     @classmethod
     def from_xml(cls, node):
         assert node.tag == 'Article'
@@ -218,9 +249,7 @@ class Article(BaseLawClass):
         return body + '\n'
 
     def __eq__(self, other):
-        if not isinstance(other, Article):
-            raise NotImplementedError(f'can not compare \"{type(other)}\" with Article')
-        return self.number == other.number
+        return isinstance(other, Article) and self.title == other.title and self.caption == other.caption and self.number == other.number
 
     def __lt__(self, other):
         def clean(number):
@@ -242,6 +271,8 @@ class Paragraph(BaseLawClass):
     hierarchy = LawHierarchy.PARAGRAPH
 
     def __init__(self, title=None, number=None, sentence=None, children=None):
+        if (not title) and number:
+            title = '第{}項'.format(int2kanji(int(number)))
         super().__init__(title, children)
         self.number = number if number else 1
         self.sentence = sentence if sentence else ''
@@ -253,10 +284,9 @@ class Paragraph(BaseLawClass):
         assert node[1].tag == 'ParagraphSentence'
         assert 'Num' in node.attrib
         number = int(node.attrib['Num'])
-        title = '第{}項'.format(int2kanji(int(number)))
         sentence = ''.join(map(lambda n: extract_text_from_sentence(n), node[1].findall('.//Sentence')))
         children = [parse_xml(child) for child in node[2:]]
-        return cls(title=title, number=number, sentence=sentence, children=children)
+        return cls(number=number, sentence=sentence, children=children)
 
     def __str__(self):
         body = str(self.number) + SPACE + self.sentence
@@ -265,9 +295,7 @@ class Paragraph(BaseLawClass):
         return body
 
     def __eq__(self, other):
-        if not isinstance(other, Paragraph):
-            raise NotImplementedError(f'can not compare \"{type(other)}\" with Paragraph')
-        return self.number == other.number
+        return isinstance(other, Paragraph) and self.title == other.title and self.number == other.number and self.sentence == other.sentence
 
     def __lt__(self, other):
         if not isinstance(other, Paragraph):
@@ -292,6 +320,12 @@ class BaseItemClass(BaseLawClass):
         if self.children:
             body += '\n' + self.__str_children__()
         return body
+
+    def __repr__(self):
+        return f'<{self.__class__.__name__} {self.title} {self.sentence}>'
+
+    def __eq__(self, other):
+        return isinstance(other, BaseItemClass) and self.title == other.title and self.sentence == other.sentence
 
 
 class Item(BaseItemClass):
@@ -375,13 +409,22 @@ class LawTreeBuilder:
             self.hrchy2nodes[hrchy] = list()
 
     def add(self, node):
+        assert isinstance(node, BaseLawClass)
+
+        # special case to merge ArticleCaption
+        if isinstance(node, Article) and node.is_caption_only():
+            if not (self.hrchy2nodes[LawHierarchy.ARTICLE]):
+                raise ValueError("ArticleCaption can not be added without previous Article")
+            self.hrchy2nodes[LawHierarchy.ARTICLE][-1].caption = node.caption
+            return
+
+        while node.children:
+            self.add(node.children.pop())
         try:
-            children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
+            node.children = self._get_children(parent_hrchy=node.hierarchy, flush=True)
         except ValueError as e:
             msg = 'failed to add new node as there are active child nodes at multiple hierarchy'
             raise ValueError(msg) from e
-        if children:
-            node.children = children
         self.hrchy2nodes[node.hierarchy].append(node)
 
     def build(self):
@@ -392,52 +435,42 @@ class LawTreeBuilder:
             raise ValueError(msg) from e
 
     def _get_children(self, parent_hrchy, flush):
-        child_hrchy_list = list()
-        flag = True if parent_hrchy is None else False
-        for hrchy in LawHierarchy:
-            if hrchy == parent_hrchy:
-                flag = True
-            elif flag and self.hrchy2nodes[hrchy]:
-                child_hrchy_list.append(hrchy)
+        child_hrchy_list = parent_hrchy.get_children() if parent_hrchy is not None else LawHierarchy
+        active_child_hrchy_list = []
+        for hrchy in child_hrchy_list:
+            if self.hrchy2nodes[hrchy]:
+                active_child_hrchy_list.append(hrchy)
 
-        if len(child_hrchy_list) == 0:
+        if len(active_child_hrchy_list) == 0:
             return list()
-        elif len(child_hrchy_list) == 1:
-            child_hrchy = child_hrchy_list[0]
-            children = self.hrchy2nodes[child_hrchy][::-1]
+        elif len(active_child_hrchy_list) == 1:
+            hrchy = active_child_hrchy_list[0]
+            children = self.hrchy2nodes[hrchy][::-1]
             if flush:
-                self.hrchy2nodes[child_hrchy] = list()
+                self.hrchy2nodes[hrchy] = list()
             return children
         else:
-            msg = 'found multiple child hierarchy under {0} ({1})'.format(
-                parent_hrchy.value,
-                ','.join(map(lambda x: x.value, child_hrchy_list))
-            )
+            msg = 'found multiple active child hierarchy under {0} ({1})'.format(
+                parent_hrchy.value if parent_hrchy else 'root',
+                ','.join(map(lambda x: x.value, active_child_hrchy_list)))
             raise ValueError(msg)
 
 
 def title_to_hierarchy(text):
-    hrchy2pattern = {
-        LawHierarchy.PART: r'第[{0}]+編'.format(NUMBER_KANJI),
-        LawHierarchy.CHAPTER: r'第[{0}]+章'.format(NUMBER_KANJI),
-        LawHierarchy.SECTION: r'第[{0}]+節'.format(NUMBER_KANJI),
-        LawHierarchy.SUBSECTION: r'第[{0}]+款'.format(NUMBER_KANJI),
-        LawHierarchy.DIVISION: r'第[{0}]+目'.format(NUMBER_KANJI),
-        LawHierarchy.ARTICLE: r'第[{0}]+条(の[{0}]+)*'.format(NUMBER_KANJI),
-        LawHierarchy.PARAGRAPH: r'[{0}]+|[{1}]+'.format(NUMBER_SUJI, '0-9'),
-        LawHierarchy.ITEM: r'[{0}]+'.format(NUMBER_KANJI),
-        LawHierarchy.SUBITEM1: r'[{0}]'.format(IROHA),
-        LawHierarchy.SUBITEM2: r'（[{0}]+）'.format(NUMBER_SUJI),
-        LawHierarchy.SUBITEM3: r'（[{0}]+）'.format(NUMBER_ROMAN)
-    }
-    for hrchy, pattern in hrchy2pattern.items():
-        m = re.fullmatch(pattern, text)
-        if m:
+    # special case for Paragraph
+    if text.isdigit():
+        return LawHierarchy.PARAGRAPH
+    # special case for Item
+    m = re.fullmatch(r'[{0}]+(の[{0}]+)*'.format(NUMBER_KANJI), text)
+    if m:
+        return LawHierarchy.ITEM
+    for hrchy in LawHierarchy:
+        if hrchy.extract(text, allow_placeholder=False, allow_partial_match=False):
             return hrchy
     return None
 
 
-def line_to_node(text):
+def line_to_law_node(text):
     if not text:
         return None
     chunks = text.strip().split()
@@ -455,7 +488,10 @@ def line_to_node(text):
     elif maybe_hrchy == LawHierarchy.DIVISION:
         return Division(title=maybe_title)
     elif maybe_hrchy == LawHierarchy.ARTICLE:
-        return Article(title=maybe_title)
+        children = []
+        if maybe_sentence:
+            children.append(Paragraph(title='第一項', number=1, sentence=maybe_sentence))
+        return Article(title=maybe_title, children=children)
     elif maybe_hrchy == LawHierarchy.PARAGRAPH:
         return Paragraph(number=int(maybe_title), sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.ITEM:
@@ -466,33 +502,9 @@ def line_to_node(text):
         return Subitem2(title=maybe_title, sentence=maybe_sentence)
     elif maybe_hrchy == LawHierarchy.SUBITEM3:
         return Subitem3(title=maybe_title, sentence=maybe_sentence)
+
+    # special case for ArticleCaption
+    match = re.fullmatch(r'（(.+)）', text)
+    if match:
+        return Article(caption=match.group(1))
     return None
-
-
-def build_law_tree(text):
-    lines = [line for line in text.split('\n') if line.strip() != '']
-    law_tree_builder = LawTreeBuilder()
-
-    idx = len(lines) - 1
-    while idx >= 0:
-        line = lines[idx]
-        idx -= 1
-        maybe_node = line_to_node(line)
-        if maybe_node is None:
-            LOGGER.warning(f'failed to process {line} @ {idx + 2}')  # +2 for 1-origin
-            continue
-        if maybe_node.hierarchy == LawHierarchy.ARTICLE:
-            # set paragraph in the line if exists
-            chunks = line.strip().split()
-            if len(chunks) > 1:
-                paragraph = Paragraph(title='第一項', number=1, sentence=' '.join(chunks[1:]))
-                law_tree_builder.add(paragraph)
-
-            # set caption in the previous line if exists
-            m = re.fullmatch(r'（.+）', lines[idx].strip())
-            if m:
-                maybe_node.caption = m.group()
-                idx -= 1
-        law_tree_builder.add(maybe_node)
-
-    return law_tree_builder.build()

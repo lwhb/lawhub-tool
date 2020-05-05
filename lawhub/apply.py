@@ -1,6 +1,6 @@
 from logging import getLogger
 
-from lawhub.action import ReplaceAction, AddAfterAction, DeleteAction
+from lawhub.action import ReplaceAction, AddWordAction, DeleteAction
 
 LOGGER = getLogger(__name__)
 
@@ -45,8 +45,8 @@ def apply_replace(action, query2node):
     LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
 
 
-def apply_add_after(action, query2node):
-    if not isinstance(action, AddAfterAction):
+def apply_add_word(action, query2node):
+    if not isinstance(action, AddWordAction):
         raise ValueError(f'apply_add_after() is called with invalid action type: {action}')
     if action.at not in query2node:
         raise NodeNotFoundError(action.at)

@@ -1,3 +1,4 @@
+NUMBER = '0-9'
 NUMBER_KANJI = '一二三四五六七八九十百千万'
 NUMBER_SUJI = '１２３４５６７８９０'
 NUMBER_ROMAN = 'ivx'
