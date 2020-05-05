@@ -100,5 +100,5 @@ class QueryCompensator:
                 query.set(hrchy, self.context.get(hrchy))
         if do_compensate and not (query.has(LawHierarchy.PARAGRAPH)):
             query.set(LawHierarchy.PARAGRAPH, '第一項')  # ToDo: this is not always appropriate for RenameAction
-        self.context = copy.deepcopy(query)
+        self.context = copy.deepcopy(query)  # ToDo: this is not always appropriate when 'query' is invalid
         return query

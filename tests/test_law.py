@@ -163,6 +163,6 @@ class TestLaw(TestCase):
             line_to_law_node('（テスト）')
         )
         self.assertEqual(
-            Item(title='三', sentence='これは第三号です。'),
-            line_to_law_node('三　これは第三号です。')
+            Item(title='一の二', sentence='これは第一の二号です。'),
+            line_to_law_node('一の二　これは第一の二号です。')
         )

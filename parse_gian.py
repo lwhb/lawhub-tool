@@ -5,25 +5,22 @@ import json
 import logging
 from pathlib import Path
 
-from lawhub.parser import GianParser
+from lawhub.parser import GianParser, RevisionParseResultEntry
 from lawhub.util import StatsFactory
 
 LOGGER = logging.getLogger('parse_gian')
 
 
-def split_to_chunks(parse_result):
+def split_to_chunks(entries):
     """
     議案を1改正文=1チャンクになるように分割する
     """
 
     chunks = []
-    prev_idx = 0
-    for idx, entry in enumerate(parse_result):
-        if '次のように改正する' in ''.join(entry.lines):
-            if idx - prev_idx:
-                chunks.append(parse_result[prev_idx:idx])
-            prev_idx = idx
-    chunks.append(parse_result[prev_idx:])
+    idx_list = [0] + [i for i, entry in enumerate(entries) if isinstance(entry, RevisionParseResultEntry)] + [len(entries)]
+    for start, end in zip(idx_list[:-1], idx_list[1:]):
+        if end - start > 0:
+            chunks.append(entries[start:end])
     return chunks
 
 

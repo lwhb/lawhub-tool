@@ -222,6 +222,9 @@ class Article(BaseLawClass):
         self.caption = caption if caption else ''
         self.number = number if number else '1'
 
+    def is_caption_only(self):
+        return self.title == '' and self.caption != ''
+
     @classmethod
     def from_xml(cls, node):
         assert node.tag == 'Article'
@@ -409,7 +412,7 @@ class LawTreeBuilder:
         assert isinstance(node, BaseLawClass)
 
         # special case to merge ArticleCaption
-        if isinstance(node, Article) and node.title == '' and node.caption != '':
+        if isinstance(node, Article) and node.is_caption_only():
             if not (self.hrchy2nodes[LawHierarchy.ARTICLE]):
                 raise ValueError("ArticleCaption can not be added without previous Article")
             self.hrchy2nodes[LawHierarchy.ARTICLE][-1].caption = node.caption
@@ -458,7 +461,7 @@ def title_to_hierarchy(text):
     if text.isdigit():
         return LawHierarchy.PARAGRAPH
     # special case for Item
-    m = re.fullmatch(r'[{0}]+'.format(NUMBER_KANJI), text)
+    m = re.fullmatch(r'[{0}]+(の[{0}]+)*'.format(NUMBER_KANJI), text)
     if m:
         return LawHierarchy.ITEM
     for hrchy in LawHierarchy:
