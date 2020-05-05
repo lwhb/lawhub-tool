@@ -245,7 +245,7 @@ class Article(BaseLawClass):
     def __str__(self):
         body = self.caption + '\n' + self.title if self.caption else self.title
         if self.children:
-            body += '\n' + self.__str_children__()
+            body += SPACE + self.__str_children__()
         return body + '\n'
 
     def __eq__(self, other):
@@ -289,7 +289,10 @@ class Paragraph(BaseLawClass):
         return cls(number=number, sentence=sentence, children=children)
 
     def __str__(self):
-        body = str(self.number) + SPACE + self.sentence
+        if self.number == 1:
+            body = self.sentence
+        else:
+            body = str(self.number) + SPACE + self.sentence
         if self.children:
             body += '\n' + self.__str_children__()
         return body
@@ -504,7 +507,7 @@ def line_to_law_node(text):
         return Subitem3(title=maybe_title, sentence=maybe_sentence)
 
     # special case for ArticleCaption
-    match = re.fullmatch(r'（(.+)）', text)
+    match = re.fullmatch(r'(（.+）)', text)
     if match:
         return Article(caption=match.group(1))
     return None
