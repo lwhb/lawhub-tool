@@ -18,7 +18,7 @@ class Query(Serializable):
     法令内の位置を表現するクラス
     """
 
-    target_hierarchies = [LawHierarchy.ARTICLE] + LawHierarchy.ARTICLE.get_children()
+    target_hierarchies = [LawHierarchy.ARTICLE] + LawHierarchy.ARTICLE.children()
 
     def __init__(self, text, hierarchy=None):
         if text is None:

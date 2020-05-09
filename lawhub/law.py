@@ -1,5 +1,6 @@
 import re
 import xml.etree.ElementTree as ET
+from collections import deque
 from enum import Enum
 from logging import getLogger
 
@@ -56,7 +57,7 @@ class LawHierarchy(Enum):
         else:
             return ''
 
-    def get_children(self):
+    def children(self):
         flag = False
         children = []
         for hrchy in LawHierarchy:
@@ -67,12 +68,20 @@ class LawHierarchy(Enum):
                     flag = True
         return children
 
-    @classmethod
-    def from_text(cls, text):
+    @staticmethod
+    def from_text(text):
         for hrchy in LawHierarchy:
             if hrchy.value == text:
                 return hrchy
         raise ValueError(f'failed to instantiate LawHierarchy from "{text}"')
+
+    @staticmethod
+    def first():
+        return list(LawHierarchy)[0]
+
+    @staticmethod
+    def last():
+        return list(LawHierarchy)[-1]
 
 
 def extract_text_from_sentence(node):
@@ -438,7 +447,7 @@ class LawTreeBuilder:
             raise ValueError(msg) from e
 
     def _get_children(self, parent_hrchy, flush):
-        child_hrchy_list = parent_hrchy.get_children() if parent_hrchy is not None else LawHierarchy
+        child_hrchy_list = parent_hrchy.children() if parent_hrchy is not None else LawHierarchy
         active_child_hrchy_list = []
         for hrchy in child_hrchy_list:
             if self.hrchy2nodes[hrchy]:
@@ -511,3 +520,35 @@ def line_to_law_node(text):
     if match:
         return Article(caption=match.group(1))
     return None
+
+
+class LawNodeFinder:
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+    def _find(self, nodes, query, hierarchy):
+        assert isinstance(nodes, list)
+        assert isinstance(query, str)
+        assert isinstance(hierarchy, LawHierarchy)
+
+        subquery = hierarchy.extract(query)
+        if subquery == '':  # no need to process this hierarchy
+            if hierarchy == LawHierarchy.last():
+                return nodes
+            else:
+                return self._find(nodes, query, hierarchy.children()[0])
+
+        # BFS for node that matches subquery
+        q = deque(nodes)
+        while q:
+            node = q.popleft()
+            if node.title == subquery:
+                if hierarchy == LawHierarchy.last():
+                    return [node]
+                else:
+                    return self._find([node], query, hierarchy.children()[0])
+            q.extend(node.children)
+        return list()
+
+    def find(self, query):
+        return self._find(self.nodes, query, LawHierarchy.first())
