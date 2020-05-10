@@ -57,7 +57,7 @@ class LawHierarchy(Enum):
         else:
             return ''
 
-    def children(self):
+    def children(self, include_self=False):
         flag = False
         children = []
         for hrchy in LawHierarchy:
@@ -66,6 +66,8 @@ class LawHierarchy(Enum):
             else:
                 if hrchy == self:
                     flag = True
+                    if include_self:
+                        children.append(hrchy)
         return children
 
     @staticmethod
