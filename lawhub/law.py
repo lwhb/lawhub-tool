@@ -1,5 +1,6 @@
 import re
 import xml.etree.ElementTree as ET
+from collections import deque
 from enum import Enum
 from logging import getLogger
 
@@ -17,6 +18,8 @@ class LawHierarchy(Enum):
     e-gov法令APIのXMLにおける階層名の一覧（階層順）
     """
 
+    CONTENTS = '目次'
+    SUPPLEMENT = '附則'
     PART = '編'
     CHAPTER = '章'
     SECTION = '節'
@@ -28,6 +31,7 @@ class LawHierarchy(Enum):
     SUBITEM1 = 'イ'
     SUBITEM2 = '（１）'
     SUBITEM3 = '（ｉ）'
+    TABLE = '表'
 
     def extract(self, string, allow_placeholder=True, allow_partial_match=True):
         """
@@ -42,6 +46,8 @@ class LawHierarchy(Enum):
             pattern = r'\([{0}]+\)|（[{1}]+）'.format(NUMBER, NUMBER_SUJI)
         elif self == LawHierarchy.SUBITEM3:
             pattern = r'\([{0}]+\)|（[{0}]+）'.format(NUMBER_ROMAN)
+        elif self in [LawHierarchy.SUPPLEMENT, LawHierarchy.CONTENTS, LawHierarchy.TABLE]:
+            pattern = self.value
         else:
             pattern = r'第[{0}]+{1}(の[{0}]+)*'.format(NUMBER_KANJI, self.value)
             if allow_placeholder:
@@ -56,7 +62,7 @@ class LawHierarchy(Enum):
         else:
             return ''
 
-    def get_children(self):
+    def children(self, include_self=False):
         flag = False
         children = []
         for hrchy in LawHierarchy:
@@ -65,14 +71,24 @@ class LawHierarchy(Enum):
             else:
                 if hrchy == self:
                     flag = True
+                    if include_self:
+                        children.append(hrchy)
         return children
 
-    @classmethod
-    def from_text(cls, text):
+    @staticmethod
+    def from_text(text):
         for hrchy in LawHierarchy:
             if hrchy.value == text:
                 return hrchy
         raise ValueError(f'failed to instantiate LawHierarchy from "{text}"')
+
+    @staticmethod
+    def first():
+        return list(LawHierarchy)[0]
+
+    @staticmethod
+    def last():
+        return list(LawHierarchy)[-1]
 
 
 def extract_text_from_sentence(node):
@@ -438,7 +454,7 @@ class LawTreeBuilder:
             raise ValueError(msg) from e
 
     def _get_children(self, parent_hrchy, flush):
-        child_hrchy_list = parent_hrchy.get_children() if parent_hrchy is not None else LawHierarchy
+        child_hrchy_list = parent_hrchy.children() if parent_hrchy is not None else LawHierarchy
         active_child_hrchy_list = []
         for hrchy in child_hrchy_list:
             if self.hrchy2nodes[hrchy]:
@@ -511,3 +527,33 @@ def line_to_law_node(text):
     if match:
         return Article(caption=match.group(1))
     return None
+
+
+class LawNodeFinder:
+    def __init__(self, nodes):
+        self.nodes = nodes
+
+    def _find(self, nodes, query, hierarchy):
+        subquery = query.get(hierarchy)
+        if subquery == '':  # no need to process this hierarchy
+            if hierarchy == LawHierarchy.last():
+                return nodes
+            else:
+                return self._find(nodes, query, hierarchy.children()[0])
+
+        # BFS for node that matches subquery
+        q = deque(nodes)
+        while q:
+            node = q.popleft()
+            if node.title.startswith(subquery):  # use startswith as title can also includes caption
+                if hierarchy == LawHierarchy.last():
+                    return [node]
+                else:
+                    return self._find([node], query, hierarchy.children()[0])
+            q.extend(node.children)
+        return list()
+
+    def find(self, query):
+        if query.has(LawHierarchy.SUPPLEMENT) or query.has(LawHierarchy.CONTENTS) or query.has(LawHierarchy.TABLE):
+            raise NotImplementedError
+        return self._find(self.nodes, query, LawHierarchy.first())

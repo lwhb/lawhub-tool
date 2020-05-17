@@ -58,13 +58,13 @@ class TestAction(TestCase):
         self.assertTrue(is_serializable(action))
 
     def test_replace_action(self):
-        text = '第一条中「第百二十五条」を「第百二十五条の二」に改める'
+        text = '第一条中「中「小」」を「大「中」」に改める'
         action = parse_action_text(text)
 
         self.assertTrue(isinstance(action, ReplaceAction))
         self.assertEqual(Query.from_text('第一条'), action.at)
-        self.assertEqual('第百二十五条', action.old)
-        self.assertEqual('第百二十五条の二', action.new)
+        self.assertEqual('中「小」', action.old)
+        self.assertEqual('大「中」', action.new)
         self.assertTrue(is_serializable(action))
 
     def test_replace_action_short(self):

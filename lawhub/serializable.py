@@ -3,6 +3,7 @@ Serializable class from Effective Python (section 26 and 34)
 """
 
 import json
+from enum import Enum
 from logging import getLogger
 
 LOGGER = getLogger(__name__)
@@ -25,6 +26,8 @@ class ToDictMixin(object):
             return self._traverse_dict(value)
         elif isinstance(value, list) or isinstance(value, tuple):
             return [self._traverse(key, i) for i in value]
+        elif isinstance(value, Enum):
+            return value.value
         elif hasattr(value, '__dict__'):
             return self._traverse_dict(value.__dict__)
         else:
@@ -78,4 +81,4 @@ class Serializable(ToDictMixin, metaclass=Registry):
 
 
 def is_serializable(obj):
-    return obj.serialize() == Serializable.deserialize(obj.serialize()).serialize()
+    return obj == Serializable.deserialize(obj.serialize())

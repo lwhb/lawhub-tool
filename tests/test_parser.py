@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from lawhub.action import RenameAction, AddLawAction
 from lawhub.law import Article
-from lawhub.parser import GianParser, ActionParseResultEntry, LawParseResultEntry, ParseResultEntry, RevisionParseResultEntry
+from lawhub.parser import GianParser, ActionParseResultEntry, LawParseResultEntry, ParseResultEntry, RevisionParseResultEntry, EmptyParseResultEntry
 
 
 class TestParseResultEntry(TestCase):
@@ -32,7 +32,7 @@ class TestGianParser(TestCase):
                 self.assertEqual('（猫法の一部改正）', entry.lines[0])
                 self.assertEqual('第一条　猫法の一部を次のように改正する。', entry.lines[1])
             if idx == 1:
-                self.assertTrue(isinstance(entry, ActionParseResultEntry))
+                self.assertTrue(isinstance(entry, EmptyParseResultEntry))
                 self.assertEqual(2, entry.idx_start)
                 self.assertEqual(3, entry.idx_end)
                 self.assertEqual(1, len(entry.lines))
@@ -44,7 +44,7 @@ class TestGianParser(TestCase):
                 self.assertEqual(3, entry.idx_start)
                 self.assertEqual(7, entry.idx_end)
                 self.assertEqual(4, len(entry.lines))
-                self.assertEqual('第一条を第二条とし、目次の次に次の一条を加える。', entry.lines[0])
+                self.assertEqual('第一条を第二条とし、第二条の前に次の一条を加える。', entry.lines[0])
                 self.assertEqual('（テスト）', entry.lines[1])
                 self.assertEqual('第一条　これは第一項です。', entry.lines[2])
                 self.assertEqual('2　これは第二項です。', entry.lines[3])
