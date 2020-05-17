@@ -1,6 +1,7 @@
 from logging import getLogger
 
 from lawhub.action import ReplaceAction, AddWordAction, DeleteAction
+from lawhub.law import LawNodeFinder
 
 LOGGER = getLogger(__name__)
 
@@ -19,7 +20,7 @@ class TextNotFoundError(Exception):
         self.query = query
 
     def __str__(self):
-        return f'{self.text} does not exist in {self.query}'
+        return f'"{self.text}" does not exist in {self.query}'
 
 
 class MultipleTextFoundError(Exception):
@@ -28,15 +29,17 @@ class MultipleTextFoundError(Exception):
         self.query = query
 
     def __str__(self):
-        return f'found {self.text} multiple times in {self.query}'
+        return f'found "{self.text}" multiple times in {self.query.text}'
 
 
-def apply_replace(action, query2node):
-    if not isinstance(action, ReplaceAction):
-        raise ValueError(f'apply_replace() is called with invalid action type: {action}')
-    if action.at not in query2node:
-        raise NodeNotFoundError(action.at)
-    node = query2node[action.at]
+def apply_replace(action, node_finder):
+    assert isinstance(action, ReplaceAction)
+    assert isinstance(node_finder, LawNodeFinder)
+
+    try:
+        node = node_finder.find(action.at)[0]
+    except Exception as e:
+        raise NodeNotFoundError(action.at) from e
     if not (hasattr(node, 'sentence')) or action.old not in node.sentence:
         raise TextNotFoundError(action.old, action.at)
     if node.sentence.count(action.old) > 1:
@@ -45,12 +48,14 @@ def apply_replace(action, query2node):
     LOGGER.debug(f'replaced \"{action.old}\" in {action.at} to \"{action.new}\"')
 
 
-def apply_add_word(action, query2node):
-    if not isinstance(action, AddWordAction):
-        raise ValueError(f'apply_add_after() is called with invalid action type: {action}')
-    if action.at not in query2node:
-        raise NodeNotFoundError(action.at)
-    node = query2node[action.at]
+def apply_add_word(action, node_finder):
+    assert isinstance(action, AddWordAction)
+    assert isinstance(node_finder, LawNodeFinder)
+
+    try:
+        node = node_finder.find(action.at)[0]
+    except Exception as e:
+        raise NodeNotFoundError(action.at) from e
     if not (hasattr(node, 'sentence')) or action.word not in node.sentence:
         raise TextNotFoundError(action.word, action.at)
     if node.sentence.count(action.word) > 1:
@@ -60,12 +65,14 @@ def apply_add_word(action, query2node):
     LOGGER.debug(f'added \"{action.what}\" at {action.at}')
 
 
-def apply_delete(action, query2node):
-    if not isinstance(action, DeleteAction):
-        raise ValueError(f'apply_delete() is called with invalid action type: {action}')
-    if action.at not in query2node:
-        raise NodeNotFoundError(action.at)
-    node = query2node[action.at]
+def apply_delete(action, node_finder):
+    assert isinstance(action, DeleteAction)
+    assert isinstance(node_finder, LawNodeFinder)
+
+    try:
+        node = node_finder.find(action.at)[0]
+    except Exception as e:
+        raise NodeNotFoundError(action.at) from e
     if not (hasattr(node, 'sentence')):
         raise TextNotFoundError('', action.at)
     for what in action.whats:

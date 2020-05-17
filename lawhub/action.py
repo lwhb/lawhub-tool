@@ -84,7 +84,8 @@ class AbstractAction(Serializable):
 
 
 class AddWordAction(AbstractAction):
-    pattern = r'(?:(.*)中)?「(.*)」の下に「(.*)」を(加える)?'
+    pattern = r'(?:([^「」]*)中)?「(.*)」の下に「(.*)」を(加える)?'
+
 
     def __init__(self, text, meta, at, word, what):
         super().__init__(text, meta)
@@ -122,7 +123,7 @@ class AddLawAction(AbstractAction):
 
 
 class DeleteAction(AbstractAction):
-    pattern = r'(?:(.*)中)?「(.*)」を削る'
+    pattern = r'(?:([^「」]*)中)?「(.*)」を削る'
 
     def __init__(self, text, meta, at, whats):
         super().__init__(text, meta)
@@ -139,7 +140,7 @@ class DeleteAction(AbstractAction):
 
 
 class ReplaceAction(AbstractAction):
-    pattern = r'(?:(.*)中)?「(.*)」を「(.*)」に(改める)?'
+    pattern = r'(?:([^「」]*)中)?「(.*)」を「(.*)」に(改める)?'
 
     def __init__(self, text, meta, at, old, new):
         super().__init__(text, meta)

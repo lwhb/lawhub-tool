@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 from unittest import TestCase
 
 from lawhub.law import LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item, line_to_law_node, LawNodeFinder
+from lawhub.query import Query
 from lawhub.serializable import is_serializable
 
 
@@ -24,12 +25,13 @@ class TestLaw(TestCase):
         self.assertEqual('3', articles[2].number)
 
     def test_extract_law_hierarchy(self):
-        string = '第七十五条の二の二第五項第三号イ（２）'
+        string = '第七十五条の二の二第五項第三号イ（２）の表'
         self.assertEqual('第七十五条の二の二', LawHierarchy.ARTICLE.extract(string))
         self.assertEqual('第五項', LawHierarchy.PARAGRAPH.extract(string))
         self.assertEqual('第三号', LawHierarchy.ITEM.extract(string))
         self.assertEqual('イ', LawHierarchy.SUBITEM1.extract(string))
         self.assertEqual('（２）', LawHierarchy.SUBITEM2.extract(string))
+        self.assertEqual('表', LawHierarchy.TABLE.extract(string))
 
         string = '同条第一項'
         self.assertEqual('同条', LawHierarchy.ARTICLE.extract(string))
@@ -41,7 +43,7 @@ class TestLaw(TestCase):
 
     def test_get_child_hierarchy_list(self):
         self.assertEqual(
-            [LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2, LawHierarchy.SUBITEM3],
+            [LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2, LawHierarchy.SUBITEM3, LawHierarchy.TABLE],
             LawHierarchy.PARAGRAPH.children()
         )
 
@@ -191,7 +193,7 @@ class TestLawNodeFinder(TestCase):
 
     def test_law_node_finder(self):
         finder = LawNodeFinder(self.build_sample_law_tree())
-        nodes = finder.find('第一条第二項')
+        nodes = finder.find(Query.from_text('第一条第二項'))
 
         self.assertEqual(1, len(nodes))
         node = nodes[0]
@@ -200,5 +202,5 @@ class TestLawNodeFinder(TestCase):
 
     def test_law_node_finder_fail(self):
         finder = LawNodeFinder(self.build_sample_law_tree())
-        self.assertEqual(0, len(finder.find('第一条第一号イ')))
-        self.assertEqual(0, len(finder.find('第三条')))
+        self.assertEqual(0, len(finder.find(Query.from_text('第一条第一号イ'))))
+        self.assertEqual(0, len(finder.find(Query.from_text('第三条'))))

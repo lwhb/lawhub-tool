@@ -18,6 +18,8 @@ class LawHierarchy(Enum):
     e-gov法令APIのXMLにおける階層名の一覧（階層順）
     """
 
+    CONTENTS = '目次'
+    SUPPLEMENT = '附則'
     PART = '編'
     CHAPTER = '章'
     SECTION = '節'
@@ -29,6 +31,7 @@ class LawHierarchy(Enum):
     SUBITEM1 = 'イ'
     SUBITEM2 = '（１）'
     SUBITEM3 = '（ｉ）'
+    TABLE = '表'
 
     def extract(self, string, allow_placeholder=True, allow_partial_match=True):
         """
@@ -43,6 +46,8 @@ class LawHierarchy(Enum):
             pattern = r'\([{0}]+\)|（[{1}]+）'.format(NUMBER, NUMBER_SUJI)
         elif self == LawHierarchy.SUBITEM3:
             pattern = r'\([{0}]+\)|（[{0}]+）'.format(NUMBER_ROMAN)
+        elif self in [LawHierarchy.SUPPLEMENT, LawHierarchy.CONTENTS, LawHierarchy.TABLE]:
+            pattern = self.value
         else:
             pattern = r'第[{0}]+{1}(の[{0}]+)*'.format(NUMBER_KANJI, self.value)
             if allow_placeholder:
@@ -529,11 +534,7 @@ class LawNodeFinder:
         self.nodes = nodes
 
     def _find(self, nodes, query, hierarchy):
-        assert isinstance(nodes, list)
-        assert isinstance(query, str)
-        assert isinstance(hierarchy, LawHierarchy)
-
-        subquery = hierarchy.extract(query)
+        subquery = query.get(hierarchy)
         if subquery == '':  # no need to process this hierarchy
             if hierarchy == LawHierarchy.last():
                 return nodes
@@ -544,7 +545,7 @@ class LawNodeFinder:
         q = deque(nodes)
         while q:
             node = q.popleft()
-            if node.title == subquery:
+            if node.title.startswith(subquery):  # use startswith as title can also includes caption
                 if hierarchy == LawHierarchy.last():
                     return [node]
                 else:
@@ -553,4 +554,6 @@ class LawNodeFinder:
         return list()
 
     def find(self, query):
+        if query.has(LawHierarchy.SUPPLEMENT) or query.has(LawHierarchy.CONTENTS) or query.has(LawHierarchy.TABLE):
+            raise NotImplementedError
         return self._find(self.nodes, query, LawHierarchy.first())

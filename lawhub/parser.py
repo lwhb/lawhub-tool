@@ -35,7 +35,7 @@ class ParseResultEntry:
                 return c.from_line(line, idx)
             except ValueError:
                 pass
-        raise ValueError(f'failed to instantiate ParseResultEntry from "{line}"')
+        return EmptyParseResultEntry.from_line(line, idx)
 
     @staticmethod
     def merge_revision_caption(caption_entry, revision_entry):
@@ -126,15 +126,22 @@ class LawParseResultEntry(ParseResultEntry):
         maybe_law_node = line_to_law_node(line)
         if maybe_law_node:
             return cls(nodes=[maybe_law_node], lines=[line], idx_start=idx, idx_end=idx + 1, success=True)
-        else:
-            raise ValueError(f'failed to instantiate {cls.__name__}')
+        raise ValueError(f'failed to instantiate {cls.__name__}')
 
 
 class ActionParseResultEntry(ParseResultEntry):
     @classmethod
     def from_line(cls, line, idx):
         action_nodes, pc, sc = line_to_action_nodes(line, meta={'line': idx})
-        return cls(nodes=action_nodes, lines=[line], idx_start=idx, idx_end=idx + 1, success=(pc == sc))
+        if sc > 0:
+            return cls(nodes=action_nodes, lines=[line], idx_start=idx, idx_end=idx + 1, success=(sc == pc))
+        raise ValueError(f'failed to instantiate {cls.__name__}')
+
+
+class EmptyParseResultEntry(ParseResultEntry):
+    @classmethod
+    def from_line(cls, line, idx):
+        return cls(nodes=list(), lines=[line], idx_start=idx, idx_end=idx + 1, success=False)
 
 
 class GianParser:

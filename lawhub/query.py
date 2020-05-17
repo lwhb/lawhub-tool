@@ -26,10 +26,13 @@ class Query(Serializable):
             self.hierarchy_map = hierarchy_map
         else:
             self.hierarchy_map = dict()
-            for hrchy in LawHierarchy:
-                maybe_hrchy_text = hrchy.extract(text)
-                if maybe_hrchy_text:
-                    self.set(hrchy, hrchy.extract(text))
+            self._init_hierarchy_map()
+
+    def _init_hierarchy_map(self):
+        for hrchy in LawHierarchy:
+            maybe_hrchy_text = hrchy.extract(self.text)
+            if maybe_hrchy_text:
+                self.set(hrchy, hrchy.extract(self.text))
 
     @classmethod
     def from_text(cls, text):
@@ -53,7 +56,7 @@ class Query(Serializable):
         return hash(';'.join(map(lambda x: f'{x[0]}:{x[1]}', self.hierarchy_map.items())))
 
     def __repr__(self):
-        return '<Query text={0} {1}>'.format(self.text, ';'.join(map(lambda x: f'{x[0]}:{x[1]}', self.hierarchy_map.items())))
+        return '<Query text={0} type={1} map={2}>'.format(self.text, self.query_type, ';'.join(map(lambda x: f'{x[0]}:{x[1]}', self.hierarchy_map.items())))
 
     def get(self, hrchy):
         return self.hierarchy_map[hrchy.name] if hrchy.name in self.hierarchy_map else ''
@@ -83,34 +86,39 @@ class QueryCompensator:
     文脈を元にQueryを補完するクラス。Actionを独立して適用できるよう「同項」といった自然言語の省略表現を冗長に書き下す必要がある
     """
 
-    # list of LawHierarchy that needs to be compensated if child hierarchy exists
-    target_hierarchies = set(LawHierarchy.ARTICLE.children(include_self=True))
-
     def __init__(self):
         self.context = Query.from_text('')
 
     def compensate(self, query):
-        # if query.text is omitted
+        # if query.text is empty, return copy of previous query
         if query.text == '':
             ret = copy.deepcopy(self.context)
             ret.text = query.text
             return ret
-
-        # if query.text is invalid
+        # if query.text is likely invalid, return as it is
         if query.is_empty():
             return query
 
+        # 1. compensate LawHierarchy that always needs to be compensated
+        for hrchy in [LawHierarchy.SUPPLEMENT]:
+            if self.context.has(hrchy):
+                query.set(hrchy, self.context.get(hrchy))
+
+        # 2. compensate placeholder
+        for hrchy in LawHierarchy:
+            if query.has(hrchy, include_placeholder=True) and not query.has(hrchy, include_placeholder=False): # if placeholder
+                if not self.context.has(hrchy):
+                    msg = f'failed to compensate {hrchy.name} for {query.text} from {self.context}'
+                    raise ValueError(msg)
+                query.set(hrchy, self.context.get(hrchy))
+
+        # 3. compensate hierarchy under ARTICLE if possible
         has_child = False
-        for hrchy in list(LawHierarchy)[::-1]:  # bottom-up order for has_child
+        for hrchy in list(LawHierarchy.ARTICLE.children(include_self=True))[::-1]:
             if query.has(hrchy, include_placeholder=True):
                 has_child = True
-                if not (query.has(hrchy, include_placeholder=False)):  # compensate if placeholder
-                    if not self.context.has(hrchy):
-                        msg = f'failed to compensate {hrchy.name} for {query.text} from {self.context}'
-                        raise ValueError(msg)
-                    query.set(hrchy, self.context.get(hrchy))
-            elif hrchy in self.target_hierarchies:
-                if has_child and self.context.has(hrchy):  # compensate target hierarchies if possible
-                    query.set(hrchy, self.context.get(hrchy))
+            elif has_child and self.context.has(hrchy):  # compensate if possible
+                query.set(hrchy, self.context.get(hrchy))
+
         self.context = copy.deepcopy(query)
         return query
