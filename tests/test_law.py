@@ -43,7 +43,7 @@ class TestLaw(TestCase):
 
     def test_get_child_hierarchy_list(self):
         self.assertEqual(
-            [LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2, LawHierarchy.SUBITEM3, LawHierarchy.TABLE],
+            [LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2, LawHierarchy.SUBITEM3, LawHierarchy.SUBITEM4, LawHierarchy.TABLE],
             LawHierarchy.PARAGRAPH.children()
         )
 
