@@ -31,6 +31,7 @@ class LawHierarchy(Enum):
     SUBITEM1 = 'イ'
     SUBITEM2 = '（１）'
     SUBITEM3 = '（ｉ）'
+    SUBITEM4 = '（イ）'
     TABLE = '表'
 
     def extract(self, string, allow_placeholder=True, allow_partial_match=True):
@@ -46,6 +47,8 @@ class LawHierarchy(Enum):
             pattern = r'\([{0}]+\)|（[{1}]+）'.format(NUMBER, NUMBER_SUJI)
         elif self == LawHierarchy.SUBITEM3:
             pattern = r'\([{0}]+\)|（[{0}]+）'.format(NUMBER_ROMAN)
+        elif self == LawHierarchy.SUBITEM4:
+            pattern = r'\([{0}]+\)|（[{0}]+）'.format(IROHA)
         elif self in [LawHierarchy.SUPPLEMENT, LawHierarchy.CONTENTS, LawHierarchy.TABLE]:
             pattern = self.value
         else:
@@ -128,13 +131,21 @@ def parse_xml(node):
         return Subitem2.from_xml(node)
     elif node.tag == 'Subitem3':
         return Subitem3.from_xml(node)
+    elif node.tag == 'Subitem4':
+        return Subitem4.from_xml(node)
     elif node.tag == 'TableStruct':
         return BaseLawClass(title='<表略>')
     elif node.tag == 'List':
         return BaseLawClass(title='<一覧略>')
+    elif node.tag == 'FigStruct':
+        return BaseLawClass(title='<図略>')
+    elif node.tag == 'AmendProvision':
+        return BaseLawClass(title='<修正略>')
+    elif node.tag == 'SupplNote':
+        return BaseLawClass(title='<注釈略>')
     else:
-        msg = f'Unknown Element {node.tag}: {node}'
-        raise NotImplementedError(msg)
+        LOGGER.debug(f'Unknown Element {node.tag}: {node}')
+        return BaseLawClass(title='<{node.tag}略>')
 
 
 def sort_law_tree(node):
@@ -415,6 +426,23 @@ class Subitem3(BaseItemClass):
 
     def __str__(self):
         return INDENT * 4 + super().__str__()
+
+
+class Subitem4(BaseItemClass):
+    hierarchy = LawHierarchy.SUBITEM4
+
+    def __init__(self, title=None, sentence=None, children=None):
+        super().__init__(title, sentence, children)
+
+    @classmethod
+    def from_xml(cls, node):
+        assert node.tag == 'Subitem4'
+        assert node[0].tag == 'Subitem4Title'
+        assert node[1].tag == 'Subitem4Sentence'
+        return super().from_xml(node)
+
+    def __str__(self):
+        return INDENT * 5 + super().__str__()
 
 
 class LawTreeBuilder:
