@@ -13,6 +13,7 @@
 !*.py
 !*.sh
 !*.cfg
+!*.conf
 
 # add all the filename I'm interested in.
 !tests/resource/*

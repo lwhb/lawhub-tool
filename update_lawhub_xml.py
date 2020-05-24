@@ -82,7 +82,7 @@ def main():
 
 if __name__ == '__main__':
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         datefmt="%m/%d/%Y %I:%M:%S",
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
