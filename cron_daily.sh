@@ -11,7 +11,7 @@ echo "start daily cron job on $current_date"
 export PIPENV_PIPFILE=$LAWHUB_ROOT/lawhub-dev/Pipfile
 logrotate $LAWHUB_ROOT/lawhub-tool/logrotate.conf -s /tmp/logrotate.state
 
-cd LAWHUB_ROOT/lawhub-dev && ./init.sh
+cd $LAWHUB_ROOT/lawhub-dev && ./init.sh
 cd $LAWHUB_ROOT/lawhub-spider && pipenv run scrapy crawl egov
 cd $LAWHUB_DATA/egov && unzip "*.zip" &>/dev/null
 cd $LAWHUB_ROOT/lawhub-tool && pipenv run python update_lawhub_xml.py
