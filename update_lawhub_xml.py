@@ -7,6 +7,7 @@
 import glob
 import logging
 import shutil
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pandas as pd
@@ -49,10 +50,11 @@ class FileManager:
         """
 
         count = 0
-        for sfp in self.source_fps:
+        for sfp in list(self.source_fps):
             tfp = self.stot(sfp)
             tfp.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(str(sfp), str(tfp))
+            self.target_fps.add(tfp)
             LOGGER.debug(f'copied {sfp} to {tfp}')
             count += 1
         LOGGER.info(f'copied total {count} files')
@@ -65,19 +67,41 @@ class FileManager:
         """
 
         count = 0
-        for tfp in self.target_fps:
+        for tfp in list(self.target_fps):
             sfp = self.ttos(tfp)
             if not sfp.exists() and sfp.parent.parent.exists():
                 tfp.unlink()
+                self.target_fps.remove(tfp)
                 LOGGER.debug(f'removed {tfp} as {sfp} does not exist')
                 count += 1
         LOGGER.info(f'removed total {count} files')
+
+    def create_index_file(self):
+        """
+        Create index.tsv, which stores xml meta data in TSV format
+        """
+
+        fp = self.target_directory / 'index.tsv'
+        records = []
+        for xml_fp in list(self.target_fps):
+            tree = ET.parse(xml_fp)
+            record = {
+                'fp': Path(xml_fp).relative_to(self.target_directory),
+                'LawNum': tree.find('LawNum').text,
+                'LawTitle': tree.find('LawBody').find('LawTitle').text
+            }
+            record.update(tree.getroot().attrib)
+            records.append(record)
+        df = pd.DataFrame(records, columns=['fp', 'LawNum', 'LawTitle', 'LawType', 'Era', 'Year', 'Num'])
+        df.to_csv(fp, index=False, sep='\t')
+        LOGGER.info(f'created index file: {fp}')
 
 
 def main():
     file_manager = FileManager()
     file_manager.copy_source_files()
     file_manager.remove_target_files()
+    file_manager.create_index_file()
 
 
 if __name__ == '__main__':
