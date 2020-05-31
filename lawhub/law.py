@@ -102,6 +102,19 @@ def extract_text_from_sentence(node):
     return text.strip()
 
 
+def extract_law_meta(xml_fp):
+    """
+    LawのXMLファイルからメタデータを抽出する
+    """
+
+    tree = ET.parse(xml_fp)
+    assert tree.getroot().tag == 'Law'
+    meta = {'LawNum': tree.find('LawNum').text,
+            'LawTitle': tree.find('LawBody').find('LawTitle').text}
+    meta.update(tree.getroot().attrib)
+    return meta
+
+
 def parse_xml(node):
     """
     XMLのnodeを与えられて、再帰的に子ノードまでBaseLawClassに変換した結果を返す
