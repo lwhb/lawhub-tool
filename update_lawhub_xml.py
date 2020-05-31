@@ -41,7 +41,7 @@ class FileManager:
 
         zid = sfp.parts[-3]
         assert sfp.parts[-2] == sfp.stem
-        return self.target_directory / self.z2y[zid] / f'{law_num}.xml'
+        return (self.target_directory / self.z2y[zid] / law_num).with_suffix('.xml')
 
     def remove_target_files(self):
         """
@@ -67,7 +67,7 @@ class FileManager:
                 tfp = self.stot(sfp, meta['LawNum'])
                 tfp.parent.mkdir(parents=True, exist_ok=True)
                 if tfp.exists():
-                    LOGGER.debug(f'overwriting {tfp}')
+                    LOGGER.warning(f'overwriting {tfp}')
                 shutil.copy(str(sfp), str(tfp))
             except Exception as e:
                 LOGGER.error(f'failed to copy {sfp}: {e}')
