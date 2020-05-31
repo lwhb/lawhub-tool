@@ -1,47 +1,37 @@
 #!/usr/bin/env python3
 
 """
-クロールしたe-Govの法令データを元にlawhub-xmlを更新する
+lawhub-xmlを元にlawhubを更新する
 """
 
 import glob
 import logging
-import shutil
 from pathlib import Path
 
-import pandas as pd
+from lawhub.constants import LAWHUB_ROOT
+from lawhub.law import parse_xml_fp, save_law_tree, extract_law_meta
 
-from lawhub.constants import LAWHUB_DATA, LAWHUB_ROOT
-from lawhub.law import extract_law_meta
-
-LOGGER = logging.getLogger('update_lawhub_xml')
+LOGGER = logging.getLogger('update_lawhub')
 
 
 class FileManager:
-    source_directory = LAWHUB_DATA / 'egov'
-    target_directory = LAWHUB_ROOT / 'lawhub-xml'
-    zip_fp = source_directory / 'zip.meta'
-    index_fp = target_directory / 'index.tsv'
-    source_pattern = f'{source_directory}/*/*/*.xml'  # {zip_id}/{egov_id}/{egov_id}.xml
-    target_pattern = f'{target_directory}/*/*.xml'  # {year}/{law_num}.xml
+    source_directory = LAWHUB_ROOT / 'lawhub-xml'
+    target_directory = LAWHUB_ROOT / 'lawhub'
+    source_pattern = f'{source_directory}/*/*.xml'
+    target_pattern = f'{target_directory}/*/*.txt'
 
     def __init__(self):
         self.source_fps = set([Path(fp) for fp in glob.glob(self.source_pattern)])
         LOGGER.info(f'found {len(self.source_fps)} source xml files under {self.source_directory}')
         self.target_fps = set([Path(fp) for fp in glob.glob(self.target_pattern)])
         LOGGER.info(f'found {len(self.target_fps)} target xml files under {self.target_directory}')
-        df = pd.read_csv(self.zip_fp, sep='\t', dtype=object)
-        self.z2y = dict(zip(df['zid'], df['yid']))
 
-    def stot(self, sfp, law_num):
+    def stot(self, sfp):
         """
         build target path from source path
-        Note that the same target path can be built from different source path
         """
 
-        zid = sfp.parts[-3]
-        assert sfp.parts[-2] == sfp.stem
-        return self.target_directory / self.z2y[zid] / f'{law_num}.xml'
+        return self.target_directory / sfp.relative_to(self.source_directory).with_suffix('.txt')
 
     def remove_target_files(self):
         """
@@ -64,11 +54,10 @@ class FileManager:
         for sfp in sorted(self.source_fps):
             try:
                 meta = extract_law_meta(sfp)
-                tfp = self.stot(sfp, meta['LawNum'])
+                nodes = parse_xml_fp(sfp)
+                tfp = self.stot(sfp)
                 tfp.parent.mkdir(parents=True, exist_ok=True)
-                if tfp.exists():
-                    LOGGER.debug(f'overwriting {tfp}')
-                shutil.copy(str(sfp), str(tfp))
+                save_law_tree(meta['LawTitle'], nodes, tfp)
             except Exception as e:
                 LOGGER.error(f'failed to copy {sfp}: {e}')
                 continue
@@ -77,26 +66,11 @@ class FileManager:
             count += 1
         LOGGER.info(f'copied total {count} source files, now total {len(self.target_fps)} target files exist')
 
-    def create_index_file(self):
-        """
-        Create index.tsv, which stores xml meta data in TSV format
-        """
-
-        records = []
-        for tfp in self.target_fps:
-            record = {'fp': Path(tfp).relative_to(self.target_directory)}
-            record.update(extract_law_meta(tfp))
-            records.append(record)
-        df = pd.DataFrame(records, columns=['fp', 'LawNum', 'LawTitle', 'LawType', 'Era', 'Year', 'Num'])
-        df.to_csv(self.index_fp, index=False, sep='\t')
-        LOGGER.info(f'created index file with {len(self.target_fps)} files :{self.index_fp}')
-
 
 def main():
     file_manager = FileManager()
     file_manager.remove_target_files()
     file_manager.copy_source_files()
-    file_manager.create_index_file()
 
 
 if __name__ == '__main__':

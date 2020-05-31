@@ -102,6 +102,29 @@ def extract_text_from_sentence(node):
     return text.strip()
 
 
+def extract_law_meta(xml_fp):
+    """
+    LawのXMLファイルからメタデータを抽出する
+    """
+
+    tree = ET.parse(xml_fp)
+    assert tree.getroot().tag == 'Law'
+    meta = {'LawNum': tree.find('LawNum').text,
+            'LawTitle': tree.find('LawBody').find('LawTitle').text}
+    meta.update(tree.getroot().attrib)
+    return meta
+
+
+def parse_xml_fp(xml_fp):
+    """
+    Lawのxmlファイルの本文をBaseLawClassに変換した結果を返す
+    """
+    tree = ET.parse(xml_fp)
+    assert tree.getroot().tag == 'Law'
+    main = tree.find('LawBody').find('MainProvision')
+    return [parse_xml(node) for node in main]
+
+
 def parse_xml(node):
     """
     XMLのnodeを与えられて、再帰的に子ノードまでBaseLawClassに変換した結果を返す
@@ -146,6 +169,13 @@ def parse_xml(node):
     else:
         LOGGER.debug(f'Unknown Element {node.tag}: {node}')
         return BaseLawClass(title='<{node.tag}略>')
+
+
+def save_law_tree(law_title, nodes, fp):
+    with open(fp, 'w') as f:
+        f.write(f'{law_title}\n\n')
+        for node in nodes:
+            f.write(f'{node}\n')
 
 
 def sort_law_tree(node):
