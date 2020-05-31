@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 
 import pandas as pd
+from tqdm import tqdm
 
 from lawhub.constants import LAWHUB_DATA, LAWHUB_ROOT
 from lawhub.law import extract_law_meta
@@ -48,8 +49,9 @@ class FileManager:
         remove all target files
         """
 
+        LOGGER.info(f'start removing target files')
         count = 0
-        for tfp in list(self.target_fps):
+        for tfp in tqdm(list(self.target_fps)):
             tfp.unlink()
             self.target_fps.remove(tfp)
             count += 1
@@ -60,8 +62,9 @@ class FileManager:
         Copy source files to target directory
         """
 
+        LOGGER.info(f'start copying source files')
         count = 0
-        for sfp in sorted(self.source_fps):
+        for sfp in tqdm(sorted(self.source_fps)):
             try:
                 meta = extract_law_meta(sfp)
                 tfp = self.stot(sfp, meta['LawNum'])
@@ -82,8 +85,9 @@ class FileManager:
         Create index.tsv, which stores xml meta data in TSV format
         """
 
+        LOGGER.info(f'start creating index file')
         records = []
-        for tfp in self.target_fps:
+        for tfp in tqdm(self.target_fps):
             record = {'fp': Path(tfp).relative_to(self.target_directory)}
             record.update(extract_law_meta(tfp))
             records.append(record)
