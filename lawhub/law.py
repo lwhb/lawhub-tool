@@ -4,7 +4,7 @@ from collections import deque
 from enum import Enum
 from logging import getLogger
 
-from lawhub.constants import NUMBER, NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA
+from lawhub.constants import NUMBER, NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA, PATTERN_LAW_NUMBER
 from lawhub.kanzize import int2kanji
 from lawhub.serializable import Serializable
 
@@ -112,6 +112,21 @@ def extract_law_meta(xml_fp):
     meta = {'LawNum': tree.find('LawNum').text,
             'LawTitle': tree.find('LawBody').find('LawTitle').text}
     meta.update(tree.getroot().attrib)
+    return meta
+
+
+def extract_target_law_meta(text):
+    """
+    改正文から対象の法律のメタデータを抽出する
+    """
+
+    pattern = r'([^"（）]*)(?:（({})）)?の一部を次のように改正する'.format(PATTERN_LAW_NUMBER)
+    m = re.search(pattern, text)
+    if not m:
+        raise ValueError('does not contain law info')
+    meta = {'LawTitle': m.group(1)}
+    if m.group(2):
+        meta['LawNum'] = m.group(2)
     return meta
 
 
