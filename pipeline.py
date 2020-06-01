@@ -7,16 +7,18 @@ from pathlib import Path
 
 from tqdm import tqdm
 
+from lawhub.constants import LAWHUB_ROOT, LAWHUB_DATA
+
 LOGGER = logging.getLogger(__name__)
-# ToDo: make this configurable
-SCRIPT_ROOT = Path('/Users/musui/lawhub/lawhub-tool')
-DATA_ROOT = Path('/Users/musui/lawhub/lawhub-spider/data')
+SCRIPT_ROOT = LAWHUB_ROOT / 'lawhub-tool'
+STAT_ROOT = LAWHUB_DATA / 'stat'
+LOG_ROOT = LAWHUB_DATA / 'log'
 
 
 class FileFinder:
     @staticmethod
     def _directory(gian_id):
-        return DATA_ROOT / gian_id.replace('-', '/')
+        return LAWHUB_DATA / 'gian' / gian_id.replace('-', '/')
 
     @staticmethod
     def find_json(gian_id):
@@ -68,7 +70,8 @@ class BashTaskTemplate:
             self.log()
 
     def log(self):
-        with open(f'./log/{self.__class__.__name__}.log', 'w') as f:
+        log_fp = (LOG_ROOT / self.__class__.__name__).with_suffix('.log')
+        with open(log_fp, 'w') as f:
             for results in (filter(lambda x: x.returncode == 0, self.results),
                             filter(lambda x: x.returncode != 0, self.results)):
                 for result in results:
@@ -83,7 +86,7 @@ class ParseGianTask(BashTaskTemplate):
         self.gian_id_list = gian_id_list
 
     def collect(self):
-        stat_fp = SCRIPT_ROOT / 'log/parse_gian.stat'
+        stat_fp = STAT_ROOT / 'parse_gian.stat'
         if stat_fp.exists():
             stat_fp.unlink()
         for gian_id in self.gian_id_list:
@@ -106,13 +109,26 @@ class GetLawTask(BashTaskTemplate):
                 self.commands.append(cmd)
 
 
+class CopyLawTask(BashTaskTemplate):
+    def __init__(self, gian_id_list, verbose=False):
+        super().__init__(verbose)
+        self.gian_id_list = gian_id_list
+
+    def collect(self):
+        for gian_id in self.gian_id_list:
+            for jsonl_fp in FileFinder.find_jsonl(gian_id):
+                out_fp = jsonl_fp.with_suffix('.xml')
+                cmd = f'cd {SCRIPT_ROOT} && ./copy_law.py -g {jsonl_fp} -o {out_fp}'
+                self.commands.append(cmd)
+
+
 class ApplyGianTask(BashTaskTemplate):
     def __init__(self, gian_id_list, verbose=False):
         super().__init__(verbose)
         self.gian_id_list = gian_id_list
 
     def collect(self):
-        stat_fp = SCRIPT_ROOT / 'log/apply_gian.stat'
+        stat_fp = STAT_ROOT / 'apply_gian.stat'
         if stat_fp.exists():
             stat_fp.unlink()
         for gian_id in self.gian_id_list:
@@ -167,7 +183,7 @@ if __name__ == '__main__':
         if task_name == 'parse':
             return ParseGianTask(gian_id_list, verbose)
         elif task_name == 'law':
-            return GetLawTask(gian_id_list, verbose)
+            return CopyLawTask(gian_id_list, verbose)
         elif task_name == 'apply':
             return ApplyGianTask(gian_id_list, verbose)
         elif task_name == 'viz':
@@ -184,7 +200,6 @@ if __name__ == '__main__':
                         default=['parse', 'law', 'apply', 'viz', 'report'],
                         choices=['parse', 'law', 'apply', 'viz', 'report'])
     parser.add_argument('-v', '--verbose', action='store_true')
-    # ToDo pass verbose option to tasks
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,

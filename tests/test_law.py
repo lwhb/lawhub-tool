@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as ET
 from unittest import TestCase
 
-from lawhub.law import LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item, line_to_law_node, LawNodeFinder
+from lawhub.law import LawHierarchy, parse_xml, Article, Chapter, sort_law_tree, Section, INDENT, SPACE, Paragraph, LawTreeBuilder, Item, line_to_law_node, LawNodeFinder, extract_target_law_meta
 from lawhub.query import Query
 from lawhub.serializable import is_serializable
 
@@ -46,6 +46,23 @@ class TestLaw(TestCase):
             [LawHierarchy.ITEM, LawHierarchy.SUBITEM1, LawHierarchy.SUBITEM2, LawHierarchy.SUBITEM3, LawHierarchy.SUBITEM4, LawHierarchy.TABLE],
             LawHierarchy.PARAGRAPH.children()
         )
+
+    def test_extract_target_law_meta(self):
+        text = '地方税法（昭和二十五年法律第二百二十六号）の一部を次のように改正する。'
+        meta = extract_target_law_meta(text)
+        self.assertEqual('地方税法', meta['LawTitle'])
+        self.assertEqual('昭和二十五年法律第二百二十六号', meta['LawNum'])
+
+    def test_extract_target_law_meta_short(self):
+        text = '地方税法の一部を次のように改正する。'
+        meta = extract_target_law_meta(text)
+        self.assertEqual('地方税法', meta['LawTitle'])
+        self.assertFalse('LawNum' in meta)
+
+    def test_extract_target_law_meta_fail(self):
+        text = '改正しない。'
+        with self.assertRaises(ValueError):
+            extract_target_law_meta(text)
 
     def test_chapter(self):
         fp = './resource/chapter.xml'

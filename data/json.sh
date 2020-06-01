@@ -1,4 +1,4 @@
 #!/bin/bash
 set -ue
 
-find "$HOME"/lawhub/lawhub-spider/data -name "houan.json" > json.list
+find "$LAWHUB_DATA/gian" -name "houan.json" > json.list
