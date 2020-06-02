@@ -5,6 +5,7 @@ import logging
 import subprocess
 from pathlib import Path
 
+import pandas as pd
 from tqdm import tqdm
 
 from lawhub.constants import LAWHUB_ROOT, LAWHUB_DATA
@@ -179,7 +180,11 @@ def main(tasks):
 
 
 if __name__ == '__main__':
-    def initialize_task(task_name, verbose=False):
+    def get_gian_id_list(fp):
+        df = pd.read_csv(fp, sep='\t')
+        return list(df['gian_id'])
+
+    def initialize_task(task_name, gian_id_list, verbose=False):
         if task_name == 'parse':
             return ParseGianTask(gian_id_list, verbose)
         elif task_name == 'law':
@@ -195,7 +200,7 @@ if __name__ == '__main__':
 
 
     parser = argparse.ArgumentParser(description='指定されたTaskを実行する')
-    parser.add_argument('-i', '--input', default='./data/pipeline.arg', help='議案ID(e.g. syu-200-1)のリスト')
+    parser.add_argument('-i', '--input', default=LAWHUB_DATA / 'gian' / 'index.tsv', help='議案ID(e.g. syu-200-1)のリスト')
     parser.add_argument('-t', '--task', nargs='+',
                         default=['parse', 'law', 'apply', 'viz', 'report'],
                         choices=['parse', 'law', 'apply', 'viz', 'report'])
@@ -207,6 +212,6 @@ if __name__ == '__main__':
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    gian_id_list = [line.strip() for line in open(args.input, 'r') if line.strip()]
-    tasks = list(map(lambda t: initialize_task(t, args.verbose), args.task))
+    gian_id_list = get_gian_id_list(args.input)
+    tasks = list(map(lambda task: initialize_task(task, gian_id_list, args.verbose), args.task))
     main(tasks)

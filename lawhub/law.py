@@ -182,7 +182,7 @@ def parse_xml(node):
     elif node.tag == 'SupplNote':
         return BaseLawClass(title='<注釈略>')
     else:
-        LOGGER.debug(f'Unknown Element {node.tag}: {node}')
+        LOGGER.warning(f'Unknown Element {node.tag}: {node}')
         return BaseLawClass(title='<{node.tag}略>')
 
 
