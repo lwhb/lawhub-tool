@@ -183,7 +183,7 @@ def parse_xml(node):
         return BaseLawClass(title='<注釈略>')
     else:
         LOGGER.warning(f'Unknown Element {node.tag}: {node}')
-        return BaseLawClass(title='<{node.tag}略>')
+        return BaseLawClass(title=f'<{node.tag}略>')
 
 
 def save_law_tree(law_title, nodes, fp):

@@ -97,7 +97,7 @@ class ParseGianTask(BashTaskTemplate):
                 self.commands.append(cmd)
 
 
-class GetLawTask(BashTaskTemplate):
+class FetchLawTask(BashTaskTemplate):
     def __init__(self, gian_id_list, verbose=False):
         super().__init__(verbose)
         self.gian_id_list = gian_id_list
@@ -106,7 +106,7 @@ class GetLawTask(BashTaskTemplate):
         for gian_id in self.gian_id_list:
             for jsonl_fp in FileFinder.find_jsonl(gian_id):
                 law_fp = jsonl_fp.with_suffix('.xml')
-                cmd = f'cd {SCRIPT_ROOT} && ./get_law.py -g {jsonl_fp} -l {law_fp}'
+                cmd = f'cd {SCRIPT_ROOT} && ./fetch_law.py -g {jsonl_fp} -o {law_fp}'
                 self.commands.append(cmd)
 
 

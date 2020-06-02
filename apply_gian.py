@@ -4,11 +4,10 @@ import argparse
 import json
 import logging
 import sys
-import xml.etree.ElementTree as ET
 
 from lawhub.action import ReplaceAction, AddWordAction, DeleteAction
 from lawhub.apply import apply_replace, apply_add_word, apply_delete
-from lawhub.law import parse_xml, LawNodeFinder, LawHierarchy
+from lawhub.law import LawNodeFinder, LawHierarchy, parse_xml_fp
 from lawhub.serializable import Serializable
 from lawhub.util import StatsFactory
 
@@ -54,8 +53,7 @@ def apply_gian(gian_fp, node_finder):
 def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp, failed_fp, skipped_fp):
     LOGGER.info(f'Start to parse {law_fp}')
     try:
-        tree = ET.parse(law_fp)
-        nodes = [parse_xml(node) for node in tree.getroot()]
+        nodes = parse_xml_fp(law_fp)
     except Exception as e:
         msg = f'failed to parse {law_fp}: {e}'
         LOGGER.error(msg)
