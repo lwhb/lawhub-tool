@@ -29,4 +29,10 @@ else
   echo "skipped updating lawhub repo as lawhub-xml is last updated at $latest_tag"
 fi
 
+# crawl gian data
+cd $LAWHUB_ROOT/lawhub-spider && pipenv run scrapy crawl gian
+
+# process gian
+cd $LAWHUB_ROOT/lawhub-tool && pipenv run python pipeline.py
+
 echo "finished daily cron job on $current_date successfully"
