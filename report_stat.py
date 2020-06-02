@@ -4,7 +4,10 @@ import logging
 
 import pandas as pd
 
+from lawhub.constants import LAWHUB_DATA
+
 LOGGER = logging.getLogger('report_stat')
+STAT_ROOT = LAWHUB_DATA / 'stat'
 
 
 def read_stat(fp):
@@ -35,9 +38,7 @@ def show_stat(df, title, file_col='file', process_col='process', success_col='su
 def main(parse_fp, apply_fp):
     parse_df = read_stat(parse_fp)
     apply_df = read_stat(apply_fp)
-    total_df = pd.merge(parse_df, apply_df, on='file', suffixes=['_p', '_a'])
 
-    show_stat(total_df, 'TOTAL', process_col='process_p', success_col='success_a')
     show_stat(parse_df, 'PARSE')
     show_stat(apply_df, 'APPLY')
 
@@ -52,6 +53,6 @@ if __name__ == '__main__':
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     main(
-        './log/parse_gian.stat',
-        './log/apply_gian.stat'
+        STAT_ROOT / 'parse_gian.stat',
+        STAT_ROOT / 'apply_gian.stat'
     )
