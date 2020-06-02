@@ -7,7 +7,7 @@ import sys
 
 from lawhub.action import ReplaceAction, AddWordAction, DeleteAction
 from lawhub.apply import apply_replace, apply_add_word, apply_delete
-from lawhub.law import LawNodeFinder, LawHierarchy, parse_xml_fp
+from lawhub.law import LawNodeFinder, LawHierarchy, parse_xml_fp, extract_law_meta, save_law_tree
 from lawhub.serializable import Serializable
 from lawhub.util import StatsFactory
 
@@ -42,17 +42,19 @@ def apply_gian(gian_fp, node_finder):
                         apply_add_word(action, node_finder)
                     elif isinstance(action, DeleteAction):
                         apply_delete(action, node_finder)
+                    applied_actions.append(action)
                 except Exception as e:
                     LOGGER.debug(e)
                     failed_actions.append(action)
-                else:
-                    applied_actions.append(action)
+            else:
+                skipped_actions.append(action)
     return applied_actions, failed_actions, skipped_actions
 
 
 def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp, failed_fp, skipped_fp):
     LOGGER.info(f'Start to parse {law_fp}')
     try:
+        meta = extract_law_meta(law_fp)
         nodes = parse_xml_fp(law_fp)
     except Exception as e:
         msg = f'failed to parse {law_fp}: {e}'
@@ -91,9 +93,7 @@ def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp, failed_fp, skipped_fp):
                     f.write(json.dumps(action.to_dict(), ensure_ascii=False) + '\n')
                 LOGGER.info(f'Saved failed actions to {skipped_fp}')
 
-    with open(out_fp, 'w') as f:
-        for node in nodes:
-            f.write(f'{node}\n')
+    save_law_tree(meta['LawTitle'], nodes, out_fp)
     LOGGER.info(f'Saved result to {out_fp}')
 
 
