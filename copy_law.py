@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import logging
 import shutil
 import sys
 from pathlib import Path
 
 import pandas as pd
+from git import Repo
 
 from lawhub.constants import LAWHUB_ROOT
 from lawhub.law import extract_target_law_meta
@@ -18,8 +20,8 @@ class LawFinder:
     LAWHUB_XML = LAWHUB_ROOT / 'lawhub-xml'
 
     def __init__(self):
-        fp = self.LAWHUB_XML / 'index.tsv'
-        self.df = pd.read_csv(fp, sep='\t')
+        self.repo = Repo(self.LAWHUB_XML)
+        self.df = pd.read_csv(self.LAWHUB_XML / 'index.tsv', sep='\t')
 
     def find_by_number(self, law_num):
         query = f'LawNum == "{law_num}"'
@@ -44,7 +46,7 @@ def main(jsonl_fp, out_fp):
 
     if out_fp.exists():
         LOGGER.info(f'skip copying as law file already exists: {out_fp}')
-        sys.exit(0)
+        return
 
     try:
         with open(jsonl_fp, 'r') as f:
@@ -53,11 +55,11 @@ def main(jsonl_fp, out_fp):
         meta = extract_target_law_meta(line)
     except ValueError as e:
         LOGGER.info(f'skip copying as no target law found, likely this is not 改正法案: {e}')
-        sys.exit(0)
+        return
     LOGGER.info(f'extracted target law: {meta}')
 
+    law_finder = LawFinder()
     try:
-        law_finder = LawFinder()
         xml_fp = law_finder.find_by_number(meta['LawNum']) if 'LawNum' in meta else law_finder.find_by_title(meta['LawTitle'])
     except ValueError as e:
         LOGGER.error(f'failed to find target law in lawhub-xml: {e}')
@@ -66,6 +68,13 @@ def main(jsonl_fp, out_fp):
 
     shutil.copy(str(xml_fp), str(out_fp))
     LOGGER.info(f'Copied {xml_fp} to {out_fp}')
+
+    meta_fp = str(out_fp) + '.meta'
+    meta['fp'] = str(xml_fp)
+    meta['tag'] = str(law_finder.repo.tags[-1])
+    with open(meta_fp, 'w') as f:
+        json.dump(meta, f, ensure_ascii=False)
+    LOGGER.info(f'Saved meta data in {meta_fp}')
 
 
 if __name__ == '__main__':
