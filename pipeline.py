@@ -1,34 +1,18 @@
 #!/usr/bin/env python3
 import argparse
-import glob
 import logging
 import subprocess
-from pathlib import Path
 
 import pandas as pd
 from tqdm import tqdm
 
 from lawhub.constants import LAWHUB_ROOT, LAWHUB_DATA
+from lawhub.fileutil import GianDirectory
 
 LOGGER = logging.getLogger(__name__)
 SCRIPT_ROOT = LAWHUB_ROOT / 'lawhub-tool'
 STAT_ROOT = LAWHUB_DATA / 'stat'
 LOG_ROOT = LAWHUB_DATA / 'log'
-
-
-class FileFinder:
-    @staticmethod
-    def _directory(gian_id):
-        return LAWHUB_DATA / 'gian' / gian_id.replace('-', '/')
-
-    @staticmethod
-    def find_json(gian_id):
-        fp = FileFinder._directory(gian_id) / 'houan.json'
-        return fp if fp.exists() else None
-
-    @staticmethod
-    def find_jsonl(gian_id):
-        return [Path(fp) for fp in glob.glob(str(FileFinder._directory(gian_id) / "*.jsonl"))]
 
 
 class BashTaskTemplate:
@@ -95,8 +79,8 @@ class ParseGianTask(BashTaskTemplate):
         if stat_fp.exists():
             stat_fp.unlink()
         for gian_id in self.gian_id_list:
-            json_fp = FileFinder.find_json(gian_id)
-            if json_fp:
+            json_fp = GianDirectory(gian_id).houan_json_fp
+            if json_fp.exists():
                 cmd = f'cd {SCRIPT_ROOT} && ./parse_gian.py -g {json_fp} -s {stat_fp}'
                 self.commands.append(cmd)
 
@@ -108,7 +92,7 @@ class FetchLawTask(BashTaskTemplate):
 
     def collect(self):
         for gian_id in self.gian_id_list:
-            for jsonl_fp in FileFinder.find_jsonl(gian_id):
+            for jsonl_fp in GianDirectory(gian_id).glob_fps('*.jsonl'):
                 law_fp = jsonl_fp.with_suffix('.xml')
                 cmd = f'cd {SCRIPT_ROOT} && ./fetch_law.py -g {jsonl_fp} -o {law_fp}'
                 self.commands.append(cmd)
@@ -121,7 +105,7 @@ class CopyLawTask(BashTaskTemplate):
 
     def collect(self):
         for gian_id in self.gian_id_list:
-            for jsonl_fp in FileFinder.find_jsonl(gian_id):
+            for jsonl_fp in GianDirectory(gian_id).glob_fps('*.jsonl'):
                 out_fp = jsonl_fp.with_suffix('.xml')
                 cmd = f'cd {SCRIPT_ROOT} && ./copy_law.py -g {jsonl_fp} -o {out_fp}'
                 self.commands.append(cmd)
@@ -137,7 +121,7 @@ class ApplyGianTask(BashTaskTemplate):
         if stat_fp.exists():
             stat_fp.unlink()
         for gian_id in self.gian_id_list:
-            for jsonl_fp in FileFinder.find_jsonl(gian_id):
+            for jsonl_fp in GianDirectory(gian_id).glob_fps('*.jsonl'):
                 law_fp = jsonl_fp.with_suffix('.xml')
                 before_fp = jsonl_fp.with_suffix('.before')
                 after_fp = jsonl_fp.with_suffix('.after')
@@ -159,8 +143,8 @@ class VizGianTask(BashTaskTemplate):
 
     def collect(self):
         for gian_id in self.gian_id_list:
-            json_fp = FileFinder.find_json(gian_id)
-            if json_fp:
+            json_fp = GianDirectory(gian_id).houan_json_fp
+            if json_fp.exists():
                 cmd = 'cd {0} && ./viz_gian.py -g {1} -i {2} -o {3}'.format(
                     SCRIPT_ROOT,
                     json_fp,
