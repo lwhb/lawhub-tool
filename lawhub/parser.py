@@ -1,8 +1,9 @@
 import itertools
 from logging import getLogger
 
+from kanjize import kanji2int
+
 from lawhub.action import line_to_action_nodes, AddLawAction
-from lawhub.kanzize import kanji2int
 from lawhub.law import line_to_law_node, LawTreeBuilder, LawHierarchy, Article
 
 LOGGER = getLogger(__name__)

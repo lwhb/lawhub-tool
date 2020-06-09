@@ -4,8 +4,9 @@ from collections import deque
 from enum import Enum
 from logging import getLogger
 
+from kanjize import int2kanji
+
 from lawhub.constants import NUMBER, NUMBER_KANJI, NUMBER_SUJI, NUMBER_ROMAN, IROHA, PATTERN_LAW_NUMBER
-from lawhub.kanzize import int2kanji
 from lawhub.serializable import Serializable
 
 LOGGER = getLogger(__name__)

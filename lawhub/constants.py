@@ -15,3 +15,4 @@ PATTERN_LAW_NUMBER = r'(?:{0})[{1}]+年(?:{2})第[{3}]+号'.format(
 )
 LAWHUB_ROOT = Path(os.environ['LAWHUB_ROOT']) if 'LAWHUB_ROOT' in os.environ else Path('/var/tmp')
 LAWHUB_DATA = Path(os.environ['LAWHUB_DATA']) if 'LAWHUB_DATA' in os.environ else Path('/var/tmp/data')
+LAWHUB_GITHUB_TOKEN = os.environ['LAWHUB_GITHUB_TOKEN'] if 'LAWHUB_GITHUB_TOKEN' in os.environ else ''

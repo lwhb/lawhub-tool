@@ -1,34 +1,18 @@
 #!/usr/bin/env python3
 import argparse
-import glob
 import logging
 import subprocess
-from pathlib import Path
 
 import pandas as pd
 from tqdm import tqdm
 
 from lawhub.constants import LAWHUB_ROOT, LAWHUB_DATA
+from lawhub.fileutil import GianDirectory
 
 LOGGER = logging.getLogger(__name__)
 SCRIPT_ROOT = LAWHUB_ROOT / 'lawhub-tool'
 STAT_ROOT = LAWHUB_DATA / 'stat'
 LOG_ROOT = LAWHUB_DATA / 'log'
-
-
-class FileFinder:
-    @staticmethod
-    def _directory(gian_id):
-        return LAWHUB_DATA / 'gian' / gian_id.replace('-', '/')
-
-    @staticmethod
-    def find_json(gian_id):
-        fp = FileFinder._directory(gian_id) / 'houan.json'
-        return fp if fp.exists() else None
-
-    @staticmethod
-    def find_jsonl(gian_id):
-        return [Path(fp) for fp in glob.glob(str(FileFinder._directory(gian_id) / "*.jsonl"))]
 
 
 class BashTaskTemplate:
@@ -50,22 +34,25 @@ class BashTaskTemplate:
     def run(self, collect_command=True, save_log=True):
         if collect_command:
             self.collect()
-
         LOGGER.info('{} started (#cmd:{})'.format(
             self.__class__.__name__,
             len(self.commands))
         )
-        for command in tqdm(self.commands):
-            if self.verbose:
-                command += ' -v'
-            LOGGER.debug(command)
-            result = subprocess.run(command, capture_output=True, shell=True)
-            self.results.append(result)
-        LOGGER.info('{} finished (success:{} fail:{})'.format(
-            self.__class__.__name__,
-            sum(map(lambda x: x.returncode == 0, self.results)),
-            sum(map(lambda x: x.returncode != 0, self.results))
-        ))
+
+        try:
+            for command in tqdm(self.commands):
+                if self.verbose:
+                    command += ' -v'
+                LOGGER.debug(command)
+                result = subprocess.run(command, capture_output=True, shell=True)
+                self.results.append(result)
+            LOGGER.info('{} finished (success:{} fail:{})'.format(
+                self.__class__.__name__,
+                sum(map(lambda x: x.returncode == 0, self.results)),
+                sum(map(lambda x: x.returncode != 0, self.results))
+            ))
+        except KeyboardInterrupt:
+            LOGGER.debug('received keyboard interrupt')
 
         if save_log:
             self.log()
@@ -79,6 +66,7 @@ class BashTaskTemplate:
                     f.write(result.args + '\n')
                     f.write(result.stderr.decode('utf-8'))
                 f.write('\n')
+        LOGGER.debug(f'saved log in {log_fp}')
 
 
 class ParseGianTask(BashTaskTemplate):
@@ -91,8 +79,8 @@ class ParseGianTask(BashTaskTemplate):
         if stat_fp.exists():
             stat_fp.unlink()
         for gian_id in self.gian_id_list:
-            json_fp = FileFinder.find_json(gian_id)
-            if json_fp:
+            json_fp = GianDirectory(gian_id).houan_json_fp
+            if json_fp.exists():
                 cmd = f'cd {SCRIPT_ROOT} && ./parse_gian.py -g {json_fp} -s {stat_fp}'
                 self.commands.append(cmd)
 
@@ -104,7 +92,7 @@ class FetchLawTask(BashTaskTemplate):
 
     def collect(self):
         for gian_id in self.gian_id_list:
-            for jsonl_fp in FileFinder.find_jsonl(gian_id):
+            for jsonl_fp in GianDirectory(gian_id).glob_fps('*.jsonl'):
                 law_fp = jsonl_fp.with_suffix('.xml')
                 cmd = f'cd {SCRIPT_ROOT} && ./fetch_law.py -g {jsonl_fp} -o {law_fp}'
                 self.commands.append(cmd)
@@ -117,7 +105,7 @@ class CopyLawTask(BashTaskTemplate):
 
     def collect(self):
         for gian_id in self.gian_id_list:
-            for jsonl_fp in FileFinder.find_jsonl(gian_id):
+            for jsonl_fp in GianDirectory(gian_id).glob_fps('*.jsonl'):
                 out_fp = jsonl_fp.with_suffix('.xml')
                 cmd = f'cd {SCRIPT_ROOT} && ./copy_law.py -g {jsonl_fp} -o {out_fp}'
                 self.commands.append(cmd)
@@ -133,7 +121,7 @@ class ApplyGianTask(BashTaskTemplate):
         if stat_fp.exists():
             stat_fp.unlink()
         for gian_id in self.gian_id_list:
-            for jsonl_fp in FileFinder.find_jsonl(gian_id):
+            for jsonl_fp in GianDirectory(gian_id).glob_fps('*.jsonl'):
                 law_fp = jsonl_fp.with_suffix('.xml')
                 before_fp = jsonl_fp.with_suffix('.before')
                 after_fp = jsonl_fp.with_suffix('.after')
@@ -155,8 +143,8 @@ class VizGianTask(BashTaskTemplate):
 
     def collect(self):
         for gian_id in self.gian_id_list:
-            json_fp = FileFinder.find_json(gian_id)
-            if json_fp:
+            json_fp = GianDirectory(gian_id).houan_json_fp
+            if json_fp.exists():
                 cmd = 'cd {0} && ./viz_gian.py -g {1} -i {2} -o {3}'.format(
                     SCRIPT_ROOT,
                     json_fp,
@@ -172,6 +160,17 @@ class ReportStatTask(BashTaskTemplate):
         self.commands.append(cmd)
 
 
+class CreatePullRequestTask(BashTaskTemplate):
+    def __init__(self, gian_id_list, verbose=False):
+        super().__init__(verbose)
+        self.gian_id_list = gian_id_list
+
+    def collect(self):
+        for gian_id in self.gian_id_list:
+            cmd = 'cd {0} && ./create_pull_request.py -g {1}'.format(SCRIPT_ROOT, gian_id)
+            self.commands.append(cmd)
+
+
 def main(tasks):
     LOGGER.info(f'Start pipeline with {len(tasks)} tasks')
     for task in tasks:
@@ -184,6 +183,7 @@ if __name__ == '__main__':
         df = pd.read_csv(fp, sep='\t')
         return list(df['gian_id'])
 
+
     def initialize_task(task_name, gian_id_list, verbose=False):
         if task_name == 'parse':
             return ParseGianTask(gian_id_list, verbose)
@@ -195,6 +195,8 @@ if __name__ == '__main__':
             return VizGianTask(gian_id_list, verbose)
         elif task_name == 'report':
             return ReportStatTask()
+        elif task_name == 'pr':
+            return CreatePullRequestTask(gian_id_list, verbose)
         else:
             return NotImplementedError
 
@@ -202,8 +204,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='指定されたTaskを実行する')
     parser.add_argument('-i', '--input', default=LAWHUB_DATA / 'gian' / 'index.tsv', help='議案ID(e.g. syu-200-1)のリスト')
     parser.add_argument('-t', '--task', nargs='+',
-                        default=['parse', 'law', 'apply', 'viz', 'report'],
-                        choices=['parse', 'law', 'apply', 'viz', 'report'])
+                        default=['parse', 'law', 'apply', 'viz', 'report', 'pr'],
+                        choices=['parse', 'law', 'apply', 'viz', 'report', 'pr'])
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
     logging.basicConfig(
