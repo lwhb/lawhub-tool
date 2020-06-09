@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+"""
+議案処理のパイプラインをbatchで実行するためのスクリプト
+"""
+
 import argparse
 import logging
 import subprocess
@@ -201,12 +206,17 @@ if __name__ == '__main__':
             return NotImplementedError
 
 
-    parser = argparse.ArgumentParser(description='指定されたTaskを実行する')
-    parser.add_argument('-i', '--input', default=LAWHUB_DATA / 'gian' / 'index.tsv', help='議案ID(e.g. syu-200-1)のリスト')
+    parser = argparse.ArgumentParser(description='議案処理のパイプラインをbatchで実行する')
+    parser.add_argument('-i', '--input',
+                        default=LAWHUB_DATA / 'gian' / 'index.tsv',
+                        help='議案IDのカラム(\'gian_id\')を持つTSV')
     parser.add_argument('-t', '--task', nargs='+',
                         default=['parse', 'law', 'apply', 'viz', 'report', 'pr'],
-                        choices=['parse', 'law', 'apply', 'viz', 'report', 'pr'])
-    parser.add_argument('-v', '--verbose', action='store_true')
+                        choices=['parse', 'law', 'apply', 'viz', 'report', 'pr'],
+                        help='実行するタスクを指定する')
+    parser.add_argument('-v', '--verbose',
+                        action='store_true',
+                        help='各タスクをverboseモードで実行する')
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,

@@ -98,15 +98,15 @@ def main(law_fp, gian_fp, out_fp, stat_fp, applied_fp, failed_fp, skipped_fp):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='法律ファイル（.xml）及び議案ファイル（.jsonl)を受け取り、改正した法律をTXT形式で出力する')
-    parser.add_argument('-l', '--law', help='法律ファイル(.xml)', required=True)
+    parser = argparse.ArgumentParser(description='JSON Lines形式にパースされた議案ファイル（.jsonl)および改正対象の法律ファイル（.xml）を受け取り、改正した法律をTXT形式で出力する')
     parser.add_argument('-g', '--gian', help='議案ファイル(.jsonl). 指定しない場合は改正せずに出力')
+    parser.add_argument('-l', '--law', help='法律ファイル(.xml)', required=True)
     parser.add_argument('-o', '--out', help='出力ファイル(.txt)', required=True)
-    parser.add_argument('-s', '--stat', help='処理結果を保存する')
     parser.add_argument('--applied', help='適用されたActionを保存する')
-    parser.add_argument('--failed', help='適用できなかったActionを保存する')
+    parser.add_argument('--failed', help='適用されなかったActionを保存する')
     parser.add_argument('--skipped', help='飛ばされたActionを保存する')
     parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-s', '--stat')
     args = parser.parse_args()
 
     logging.basicConfig(

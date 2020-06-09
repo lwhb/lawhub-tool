@@ -78,9 +78,9 @@ def main(jsonl_fp, out_fp):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='JSONLinesを受け取り、改正対象のXMLを法令をlawhub-xmlからコピーする')
+    parser = argparse.ArgumentParser(description='JSON Lines形式にパースされた議案ファイルを受け取り、改正対象のXMLを法令をlawhub-xmlからコピーする')
     parser.add_argument('-g', '--gian', help='議案ファイル(.jsonl)', required=True)
-    parser.add_argument('-o', '--out', help='コピー先', required=True)
+    parser.add_argument('-o', '--out', help='コピー先(.xml)', required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 

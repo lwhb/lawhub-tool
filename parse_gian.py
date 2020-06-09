@@ -65,10 +65,10 @@ def main(in_fp, stat_fp):
 
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='議案ファイル（.json)を受け取り、パースした結果を法案ごとに分けてJSON Lines形式（1.jsonl, 2.jsonl, ...）で保存する')
+    argparser = argparse.ArgumentParser(description='議案ファイル（.json)を受け取り、JSON Lines形式にパースした結果を、改正対象の法案ごとに分けて保存する（0.jsonl, 1.jsonl, ...）')
     argparser.add_argument('-g', '--gian', help='議案ファイル(.json)', required=True)
-    argparser.add_argument('-s', '--stat')
     argparser.add_argument('-v', '--verbose', action='store_true')
+    argparser.add_argument('-s', '--stat')
     args = argparser.parse_args()
 
     logging.basicConfig(
