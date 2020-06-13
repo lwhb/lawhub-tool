@@ -31,6 +31,6 @@ fi
 
 # run gian pipeline
 cd $LAWHUB_ROOT/lawhub-spider && pipenv run scrapy crawl gian
-cd $LAWHUB_ROOT/lawhub-tool && pipenv run python pipeline.py --nobar
+cd $LAWHUB_ROOT/lawhub-tool && pipenv run python pipeline.py --verbose --nobar
 
 echo "finished daily cron job on $current_date successfully"
