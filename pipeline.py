@@ -21,9 +21,9 @@ LOG_ROOT = LAWHUB_DATA / 'log'
 
 
 class TaskConfig:
-    def __init__(self, verbose=False, progress_bar=True):
+    def __init__(self, verbose=False, disable_tqdm=False):
         self.verbose = verbose
-        self.progress_bar = progress_bar
+        self.disable_tqdm = disable_tqdm
 
 
 class BashTaskTemplate:
@@ -54,8 +54,7 @@ class BashTaskTemplate:
         )
 
         try:
-            commands = tqdm(self.commands) if self.config.progress_bar else self.commands
-            for command in commands:
+            for command in tqdm(self.commands, disable=self.config.disable_tqdm):
                 if self.config.verbose:
                     command += ' -v'
                 LOGGER.debug(command)
@@ -227,7 +226,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose',
                         action='store_true',
                         help='各タスクをverboseモードで実行する')
-    parser.add_argument('--nobar', '--nobar',
+    parser.add_argument('--nobar', dest='disable_tqdm',
                         action='store_true',
                         help='プログレスバーを表示しない')
     args = parser.parse_args()
@@ -237,7 +236,7 @@ if __name__ == '__main__':
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    config = TaskConfig(verbose=args.verbose, progress_bar=not args.nobar)
+    config = TaskConfig(verbose=args.verbose, disable_tqdm=args.disable_tqdm)
     gian_id_list = get_gian_id_list(args.input)
     tasks = list(map(lambda task: initialize_task(task, gian_id_list, config), args.task))
     main(tasks)
