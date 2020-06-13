@@ -10,6 +10,7 @@ import json
 import logging
 import shutil
 
+import pandas as pd
 from git import Repo
 from github import Github
 
@@ -101,18 +102,55 @@ def process_feature_branch(gian_id):
     return pushed
 
 
+def build_pull_request_content(gian_id):
+    def build_title():
+        gian_name = '{0}第{1}回第{2}号'.format(keika['議案種類'], keika['議案提出回次'], keika['議案番号'])
+        return '{0}:{1}'.format(gian_name, houan['title'])
+
+    def build_table():
+        records = []
+        for key, val in keika.items():
+            val = val.replace('\n', '')
+            if val and val != '／':
+                records.append({'項目': key, '内容': val})
+        df = pd.DataFrame(records, columns=['項目', '内容'])
+        return df.to_markdown(showindex=False)
+
+    def build_body():
+        return '\n'.join([
+            '## 理由',
+            houan['reason'],
+            '',
+            '## 経過',
+            build_table(),
+            '',
+            '## リンク',
+            '* [本文]({})'.format(meta['honbun']),
+            '* [経過]({})'.format(meta['keika'])
+        ])
+
+    gian_directory = GianDirectory(gian_id)
+    keika = gian_directory.read_keika_json()
+    houan = gian_directory.read_houan_json()
+    meta = gian_directory.read_index_meta()
+
+    return build_title(), build_body()
+
+
 def process_pull_request(gian_id):
     github = Github(LAWHUB_GITHUB_TOKEN)
     repo = github.get_repo("lwhb/lawhub")
+    title, body = build_pull_request_content(gian_id)
 
     for pr in repo.get_pulls():
         if pr.head.ref == gian_id:
-            LOGGER.debug(f'skip creating pull request as pull request for {gian_id} already exists')
-            return False
-
-    houan = GianDirectory(gian_id).read_houan_json()
-    pr = repo.create_pull(title=houan['title'], body=houan['reason'], head=gian_id, base="master")
-    LOGGER.info(f'created pull request: {pr}')
+            LOGGER.debug(f'found pull request for {gian_id}')
+            if pr.title != title or pr.body != body:
+                pr.edit(title=title, body=body)
+                LOGGER.debug(f'updated {gian_id} pull request with new title and body')
+            return
+    pr = repo.create_pull(title=title, body=body, head=gian_id, base="master")
+    LOGGER.info(f'created a new {gian_id} pull request: {pr}')
 
 
 def main(gian_id):

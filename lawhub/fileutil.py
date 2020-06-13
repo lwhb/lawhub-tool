@@ -2,6 +2,8 @@ import glob
 import json
 from pathlib import Path
 
+import pandas as pd
+
 from lawhub.constants import LAWHUB_DATA
 
 
@@ -24,6 +26,11 @@ class GianDirectory:
 
     def read_xml_metas(self):
         return [json.load(open(fp, 'r')) for fp in self.glob_fps('*.xml.meta')]
+
+    def read_index_meta(self):
+        fp = LAWHUB_DATA / 'gian' / 'index.tsv'
+        df = pd.read_csv(fp, sep='\t')
+        return df[df['gian_id'] == self.gian_id].to_dict(orient='records')[0]
 
     def glob_fps(self, pattern):
         pattern = str(self.directory / pattern)
