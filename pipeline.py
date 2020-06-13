@@ -20,15 +20,24 @@ STAT_ROOT = LAWHUB_DATA / 'stat'
 LOG_ROOT = LAWHUB_DATA / 'log'
 
 
+class TaskConfig:
+    def __init__(self, verbose=False, progress_bar=True):
+        self.verbose = verbose
+        self.progress_bar = progress_bar
+
+
 class BashTaskTemplate:
     """
     Template to run bash commands and report command log
     """
 
-    def __init__(self, verbose=False):
+    def __init__(self, config=None):
         self.commands = []
         self.results = []
-        self.verbose = verbose
+        self.config = config if config else TaskConfig()
+
+    def __repr__(self):
+        return self.__class__.__name__
 
     def collect(self):
         """
@@ -45,8 +54,9 @@ class BashTaskTemplate:
         )
 
         try:
-            for command in tqdm(self.commands):
-                if self.verbose:
+            commands = tqdm(self.commands) if self.config.progress_bar else self.commands
+            for command in commands:
+                if self.config.verbose:
                     command += ' -v'
                 LOGGER.debug(command)
                 result = subprocess.run(command, capture_output=True, shell=True)
@@ -75,8 +85,8 @@ class BashTaskTemplate:
 
 
 class ParseGianTask(BashTaskTemplate):
-    def __init__(self, gian_id_list, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, gian_id_list, config=None):
+        super().__init__(config)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -91,8 +101,8 @@ class ParseGianTask(BashTaskTemplate):
 
 
 class FetchLawTask(BashTaskTemplate):
-    def __init__(self, gian_id_list, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, gian_id_list, config=None):
+        super().__init__(config)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -104,8 +114,8 @@ class FetchLawTask(BashTaskTemplate):
 
 
 class CopyLawTask(BashTaskTemplate):
-    def __init__(self, gian_id_list, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, gian_id_list, config=None):
+        super().__init__(config)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -117,8 +127,8 @@ class CopyLawTask(BashTaskTemplate):
 
 
 class ApplyGianTask(BashTaskTemplate):
-    def __init__(self, gian_id_list, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, gian_id_list, config=None):
+        super().__init__(config)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -142,8 +152,8 @@ class ApplyGianTask(BashTaskTemplate):
 
 
 class VizGianTask(BashTaskTemplate):
-    def __init__(self, gian_id_list, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, gian_id_list, config=None):
+        super().__init__(config)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -166,8 +176,8 @@ class ReportStatTask(BashTaskTemplate):
 
 
 class CreatePullRequestTask(BashTaskTemplate):
-    def __init__(self, gian_id_list, verbose=False):
-        super().__init__(verbose)
+    def __init__(self, gian_id_list, config=None):
+        super().__init__(config)
         self.gian_id_list = gian_id_list
 
     def collect(self):
@@ -177,7 +187,7 @@ class CreatePullRequestTask(BashTaskTemplate):
 
 
 def main(tasks):
-    LOGGER.info(f'Start pipeline with {len(tasks)} tasks')
+    LOGGER.info(f'Start pipeline with {len(tasks)} tasks: {tasks}')
     for task in tasks:
         LOGGER.info(f'Start {task.__class__.__name__} task')
         task.run()
@@ -189,19 +199,19 @@ if __name__ == '__main__':
         return list(df['gian_id'])
 
 
-    def initialize_task(task_name, gian_id_list, verbose=False):
+    def initialize_task(task_name, gian_id_list, config=None):
         if task_name == 'parse':
-            return ParseGianTask(gian_id_list, verbose)
+            return ParseGianTask(gian_id_list, config)
         elif task_name == 'law':
-            return CopyLawTask(gian_id_list, verbose)
+            return CopyLawTask(gian_id_list, config)
         elif task_name == 'apply':
-            return ApplyGianTask(gian_id_list, verbose)
+            return ApplyGianTask(gian_id_list, config)
         elif task_name == 'viz':
-            return VizGianTask(gian_id_list, verbose)
+            return VizGianTask(gian_id_list, config)
         elif task_name == 'report':
-            return ReportStatTask()
+            return ReportStatTask(config)
         elif task_name == 'pr':
-            return CreatePullRequestTask(gian_id_list, verbose)
+            return CreatePullRequestTask(gian_id_list, config)
         else:
             return NotImplementedError
 
@@ -217,6 +227,9 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose',
                         action='store_true',
                         help='各タスクをverboseモードで実行する')
+    parser.add_argument('--nobar', '--nobar',
+                        action='store_true',
+                        help='プログレスバーを表示しない')
     args = parser.parse_args()
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -224,6 +237,7 @@ if __name__ == '__main__':
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
+    config = TaskConfig(verbose=args.verbose, progress_bar=not args.nobar)
     gian_id_list = get_gian_id_list(args.input)
-    tasks = list(map(lambda task: initialize_task(task, gian_id_list, args.verbose), args.task))
+    tasks = list(map(lambda task: initialize_task(task, gian_id_list, config), args.task))
     main(tasks)
