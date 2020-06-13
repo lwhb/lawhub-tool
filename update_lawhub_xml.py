@@ -92,7 +92,7 @@ class FileManager:
             record.update(extract_law_meta(tfp))
             records.append(record)
         df = pd.DataFrame(records, columns=['fp', 'LawNum', 'LawTitle', 'LawType', 'Era', 'Year', 'Num'])
-        df = df.sort_values(by=['Era', 'Year', 'Num'])
+        df = df.sort_values(by=['Era', 'Year', 'Num', 'LawType'])
         df.to_csv(self.index_fp, index=False, sep='\t')
         LOGGER.info(f'created index file with {len(self.target_fps)} files :{self.index_fp}')
 
