@@ -57,7 +57,6 @@ class BashTaskTemplate:
             for command in tqdm(self.commands, disable=self.config.disable_tqdm):
                 if self.config.verbose:
                     command += ' -v'
-                LOGGER.debug(command)
                 result = subprocess.run(command, capture_output=True, shell=True)
                 self.results.append(result)
             LOGGER.info('{} finished (success:{} fail:{})'.format(
@@ -66,7 +65,7 @@ class BashTaskTemplate:
                 sum(map(lambda x: x.returncode != 0, self.results))
             ))
         except KeyboardInterrupt:
-            LOGGER.debug('received keyboard interrupt')
+            LOGGER.info('received keyboard interrupt')
 
         if save_log:
             self.log()
@@ -80,7 +79,7 @@ class BashTaskTemplate:
                     f.write(result.args + '\n')
                     f.write(result.stderr.decode('utf-8'))
                 f.write('\n')
-        LOGGER.debug(f'saved log in {log_fp}')
+        LOGGER.info(f'saved log in {log_fp}')
 
 
 class ParseGianTask(BashTaskTemplate):
