@@ -14,7 +14,7 @@ import pandas as pd
 from git import Repo
 from github import Github
 
-from lawhub.constants import LAWHUB_ROOT, LAWHUB_GITHUB_TOKEN
+from lawhub.constants import LAWHUB_ROOT, LAWHUB_GITHUB_TOKEN, LOG_DATE_FORMAT, LOG_FORMAT
 from lawhub.fileutil import GianDirectory
 
 LOGGER = logging.getLogger('create_pull_request')
@@ -165,10 +165,6 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
 
     main(args.gian)

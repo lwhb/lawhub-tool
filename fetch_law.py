@@ -9,6 +9,7 @@ from pathlib import Path
 
 import requests
 
+from lawhub.constants import LOG_DATE_FORMAT, LOG_FORMAT
 from lawhub.law import extract_target_law_meta
 
 LOGGER = logging.getLogger('get_law')
@@ -65,10 +66,6 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
 
     main(Path(args.gian), Path(args.law))

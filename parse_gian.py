@@ -5,6 +5,7 @@ import json
 import logging
 from pathlib import Path
 
+from lawhub.constants import LOG_DATE_FORMAT, LOG_FORMAT
 from lawhub.parser import GianParser, RevisionParseResultEntry
 from lawhub.util import StatsFactory
 
@@ -71,10 +72,6 @@ if __name__ == '__main__':
     argparser.add_argument('-s', '--stat')
     args = argparser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
 
     main(Path(args.gian), args.stat)

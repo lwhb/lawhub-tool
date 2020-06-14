@@ -2,6 +2,7 @@
 import argparse
 import logging
 
+from lawhub.constants import LOG_DATE_FORMAT, LOG_FORMAT
 from lawhub.parser import GianParser
 
 LOGGER = logging.getLogger('format_law')
@@ -29,10 +30,6 @@ if __name__ == '__main__':
     argparser.add_argument('-v', '--verbose', action='store_true')
     args = argparser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
 
     main(args.input, args.output)

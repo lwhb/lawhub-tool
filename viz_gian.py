@@ -6,6 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
+from lawhub.constants import LOG_DATE_FORMAT, LOG_FORMAT
 from lawhub.serializable import Serializable
 
 LOGGER = logging.getLogger('apply_gian')
@@ -95,11 +96,7 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
     LOGGER.info(f'Start viz_gian with {args}')
 
     main(args.gian, args.input, args.output)

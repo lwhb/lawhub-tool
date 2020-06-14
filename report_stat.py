@@ -4,7 +4,7 @@ import logging
 
 import pandas as pd
 
-from lawhub.constants import LAWHUB_DATA
+from lawhub.constants import LAWHUB_DATA, LOG_DATE_FORMAT, LOG_FORMAT
 
 LOGGER = logging.getLogger('report_stat')
 STAT_ROOT = LAWHUB_DATA / 'stat'
@@ -47,11 +47,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='.STATファイルから統計情報を出力する')
     parser.add_argument('-v', '--verbose', action='store_true')
     args = parser.parse_args()
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
     main(
         STAT_ROOT / 'parse_gian.stat',
         STAT_ROOT / 'apply_gian.stat'

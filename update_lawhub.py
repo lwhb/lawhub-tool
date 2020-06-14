@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from lawhub.constants import LAWHUB_ROOT
+from lawhub.constants import LAWHUB_ROOT, LOG_DATE_FORMAT, LOG_FORMAT
 from lawhub.law import parse_xml_fp, save_law_tree, extract_law_meta
 
 LOGGER = logging.getLogger('update_lawhub')
@@ -81,9 +81,5 @@ if __name__ == '__main__':
     argparser.add_argument('--nobar', dest='disable_tqdm', action='store_true', help='プログレスバーを表示しない')
     args = argparser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
     main(args.disable_tqdm)

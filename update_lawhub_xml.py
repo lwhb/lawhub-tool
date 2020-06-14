@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-from lawhub.constants import LAWHUB_DATA, LAWHUB_ROOT
+from lawhub.constants import LAWHUB_DATA, LAWHUB_ROOT, LOG_DATE_FORMAT, LOG_FORMAT
 from lawhub.law import extract_law_meta
 
 LOGGER = logging.getLogger('update_lawhub_xml')
@@ -90,7 +90,7 @@ class FileManager:
             record.update(extract_law_meta(tfp))
             records.append(record)
         df = pd.DataFrame(records, columns=['fp', 'LawNum', 'LawTitle', 'LawType', 'Era', 'Year', 'Num'])
-        df = df.sort_values(by=['Era', 'Year', 'Num', 'LawType'])
+        df = df.sort_values(by=['Era', 'Year', 'Num', 'LawType', 'LawNum', 'LawTitle'])
         df.to_csv(self.index_fp, index=False, sep='\t')
         LOGGER.info(f'created index file with {len(self.target_fps)} files :{self.index_fp}')
 
@@ -108,9 +108,5 @@ if __name__ == '__main__':
     argparser.add_argument('--nobar', dest='disable_tqdm', action='store_true', help='プログレスバーを表示しない')
     args = argparser.parse_args()
 
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        datefmt="%m/%d/%Y %I:%M:%S",
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, datefmt=LOG_DATE_FORMAT, format=LOG_FORMAT)
     main(args.disable_tqdm)
